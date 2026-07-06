@@ -27,9 +27,14 @@ html{font-size:17px}
 .score-pill .correct{color:#059669;font-weight:600}
 .score-pill .slash{color:#d1d5db}
 .layout{display:flex;flex:1;min-height:0;overflow-y:auto}
-.sidebar{width:280px;min-width:280px;background:#fff;padding:20px 16px;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;z-index:2;gap:0}
+.sidebar{width:280px;min-width:200px;background:#fff;padding:20px 16px;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;z-index:2;gap:0}
 .sidebar h2{font-size:1rem;font-weight:700;color:#111}
 .sidebar .subtitle{font-size:.6875rem;color:#9ca3af;line-height:1.4}
+/* ── Sidebar resize rail ── */
+.side-resize-rail{width:6px;cursor:col-resize;flex-shrink:0;position:relative;background:transparent;z-index:3;transition:background .15s}
+.side-resize-rail:hover,.side-resize-rail.active{background:rgba(37,99,235,.15)}
+.side-resize-grip{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2px;height:32px;background:#d1d5db;border-radius:1px;pointer-events:none}
+.side-resize-rail:hover .side-resize-grip,.side-resize-rail.active .side-resize-grip{background:#2563eb}
 .collapsible{border-top:1px solid #f3f4f6}
 .collapsible:last-child{border-bottom:1px solid #f3f4f6}
 .collapsible-header{display:flex;align-items:center;justify-content:space-between;padding:10px 0;cursor:pointer;user-select:none;font-size:.6875rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em}
@@ -87,7 +92,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .card-hidden{display:none}
 
 /* ── Quiz sidebar ── */
-.q-sidebar{width:340px;min-width:340px}
+.q-sidebar{width:340px;min-width:200px}
 .q-option{display:block;width:100%;text-align:left;padding:8px 10px;margin-bottom:4px;font-family:'Inter',sans-serif;font-size:.6875rem;color:#374151;background:#fff;border:1px solid #e5e7eb;border-radius:5px;cursor:pointer;transition:all .12s;line-height:1.4}
 .q-option:hover{background:#f0f4ff;border-color:#93c5fd}
 .q-option.locked{pointer-events:none;opacity:.7}
@@ -269,6 +274,8 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
       <button class="next-btn" onclick="nextQuestion()" id="next-btn"><i class="ti ti-chevron-right"></i> Next</button>
     </div>
   </aside>
+
+  <div class="side-resize-rail" id="side-resize-rail"><div class="side-resize-grip"></div></div>
 
   <main class="main">
     <div class="chart-area">
@@ -798,6 +805,115 @@ document.querySelectorAll('.float-card .card-tabs').forEach(tab => {
     saveSharedSize();
   });
 });
+
+// ── Sidebar resize rail ──
+(function initSidebarResize() {
+  const SIDE_WIDTH_KEY = 'stats_viz_sidebar_widths';
+  let sideWidths = {};
+  try { sideWidths = JSON.parse(localStorage.getItem(SIDE_WIDTH_KEY)) || {}; } catch(e) {}
+
+  function getVisibleSidebar() {
+    return document.getElementById('sidebar-arr').style.display !== 'none' ? 'sidebar-arr'
+         : document.getElementById('sidebar-hr').style.display !== 'none' ? 'sidebar-hr'
+         : document.getElementById('sidebar-quiz').style.display !== 'none' ? 'sidebar-quiz'
+         : null;
+  }
+
+  // Apply saved widths on init
+  function applySideWidths() {
+    if (sideWidths['sidebar-arr']) document.getElementById('sidebar-arr').style.width = sideWidths['sidebar-arr'] + 'px';
+    if (sideWidths['sidebar-hr']) document.getElementById('sidebar-hr').style.width = sideWidths['sidebar-hr'] + 'px';
+    if (sideWidths['sidebar-quiz']) document.getElementById('sidebar-quiz').style.width = sideWidths['sidebar-quiz'] + 'px';
+  }
+  applySideWidths();
+
+  const rail = document.getElementById('side-resize-rail');
+  let dragging = false, startX = 0, startW = 0, activeSideId = null;
+
+  rail.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const sideId = getVisibleSidebar();
+    if (!sideId) return;
+    activeSideId = sideId;
+    const sidebar = document.getElementById(sideId);
+    dragging = true;
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
+    rail.classList.add('active');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const newW = Math.max(200, startW + dx);
+    const sidebar = document.getElementById(activeSideId);
+    if (sidebar) sidebar.style.width = newW + 'px';
+    // Update all three sidebars to the same width so tab switching doesn't jump
+    document.querySelectorAll('.sidebar').forEach(function(s) { s.style.width = newW + 'px'; });
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false;
+    rail.classList.remove('active');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+    // Save width for current sidebar type
+    if (activeSideId) {
+      const sidebar = document.getElementById(activeSideId);
+      if (sidebar) {
+        const w = sidebar.offsetWidth;
+        sideWidths[activeSideId] = w;
+        try { localStorage.setItem(SIDE_WIDTH_KEY, JSON.stringify(sideWidths)); } catch(e) {}
+      }
+    }
+    activeSideId = null;
+    // Force Chart.js to resize
+    window.dispatchEvent(new Event('resize'));
+  });
+
+  // Touch support
+  rail.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const sideId = getVisibleSidebar();
+    if (!sideId) return;
+    activeSideId = sideId;
+    const sidebar = document.getElementById(sideId);
+    dragging = true;
+    startX = e.touches[0].clientX;
+    startW = sidebar.offsetWidth;
+    rail.classList.add('active');
+  }, {passive: false});
+
+  document.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    const dx = e.touches[0].clientX - startX;
+    const newW = Math.max(200, startW + dx);
+    const sidebar = document.getElementById(activeSideId);
+    if (sidebar) sidebar.style.width = newW + 'px';
+    document.querySelectorAll('.sidebar').forEach(function(s) { s.style.width = newW + 'px'; });
+  }, {passive: false});
+
+  document.addEventListener('touchend', function() {
+    if (!dragging) return;
+    dragging = false;
+    rail.classList.remove('active');
+    if (activeSideId) {
+      const sidebar = document.getElementById(activeSideId);
+      if (sidebar) {
+        const w = sidebar.offsetWidth;
+        sideWidths[activeSideId] = w;
+        try { localStorage.setItem(SIDE_WIDTH_KEY, JSON.stringify(sideWidths)); } catch(e) {}
+      }
+    }
+    activeSideId = null;
+    window.dispatchEvent(new Event('resize'));
+  });
+})();
 
 // ── Font scale ──
 const FONT_SCALE_KEY = 'stats_viz_font_scale';
