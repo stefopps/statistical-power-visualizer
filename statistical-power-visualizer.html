@@ -764,8 +764,13 @@ function getDsKey() {
   return document.getElementById('ds-api-key').value.trim() || localStorage.getItem('stats_viz_ds_key') || '';
 }
 
+// ── Attending response cache — persists across sessions ──
+const ATTENDING_CACHE_KEY = 'stats_viz_attending';
+function loadAttendingCache() { try { const r = localStorage.getItem(ATTENDING_CACHE_KEY); return r ? JSON.parse(r) : {}; } catch(e) { return {}; } }
+function saveAttendingCache(obj) { localStorage.setItem(ATTENDING_CACHE_KEY, JSON.stringify(obj)); }
 
-async function askDeepSeek(qIdx, optIdx, followUpText) {
+
+async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
   const key = getDsKey();
   if (!key) {
     document.getElementById('cbody-formula').innerHTML = '<span class="body-text" style="color:#ef4444">Set your DeepSeek API key in Tools &amp; JSON first.</span>';
@@ -776,6 +781,20 @@ async function askDeepSeek(qIdx, optIdx, followUpText) {
   const q = QUESTION_BANK[qIdx];
   const opt = q.options[optIdx];
   const formulaEl = document.getElementById('cbody-formula');
+  const cacheKey = q.id + ':' + optIdx;
+
+  // ── Cache check — skip if forceRefresh or follow-up ──
+  if (!forceRefresh && !followUpText) {
+    const cached = loadAttendingCache();
+    if (cached[cacheKey]) {
+      const hr = opt.graph ? opt.graph.hr : 0.60;
+      const reply = cached[cacheKey];
+      formulaEl.innerHTML = `<span class="math-line">HR=${hr.toFixed(2)} → 1.0 − ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}% prevented</span><span class="body-text">${opt.desc}</span><div class="ai-reply"><div class="ai-reply-label">Attending (DeepSeek) · cached</div>${reply}</div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending">🎤</button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Ask again</button>`;
+      switchCardTab('formula');
+      lastAskState = { qIdx, optIdx, q, opt };
+      return;
+    }
+  }
 
   // Store current state for voice follow-up
   lastAskState = { qIdx, optIdx, q, opt };
@@ -819,9 +838,16 @@ Correct answer index: ${q.correct} (this option is index ${optIdx})
     const data = await r.json();
     const reply = data.choices?.[0]?.message?.content?.trim() || 'No response.';
 
-    formulaEl.innerHTML = `<span class="math-line">HR=${hr.toFixed(2)} → 1.0 − ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}% prevented</span><span class="body-text">${opt.desc}</span><div class="ai-reply"><div class="ai-reply-label">Attending (DeepSeek)</div>${reply}</div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending">🎤</button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx})">Ask again</button>`;
+    // Save to cache
+    if (!followUpText) {
+      const cached = loadAttendingCache();
+      cached[cacheKey] = reply;
+      saveAttendingCache(cached);
+    }
+
+    formulaEl.innerHTML = `<span class="math-line">HR=${hr.toFixed(2)} → 1.0 − ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}% prevented</span><span class="body-text">${opt.desc}</span><div class="ai-reply"><div class="ai-reply-label">Attending (DeepSeek)</div>${reply}</div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending">🎤</button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Ask again</button>`;
   } catch (e) {
-    formulaEl.innerHTML = `<span class="body-text" style="color:#ef4444">Error: ${e.message}</span><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx})">Retry</button>`;
+    formulaEl.innerHTML = `<span class="body-text" style="color:#ef4444">Error: ${e.message}</span><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Retry</button>`;
   }
 }
 
