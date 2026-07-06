@@ -26,8 +26,8 @@ html{font-size:17px}
 .score-pill.show{display:flex}
 .score-pill .correct{color:#059669;font-weight:600}
 .score-pill .slash{color:#d1d5db}
-.layout{display:flex;flex:1;min-height:0}
-.sidebar{width:280px;min-width:280px;background:#fff;padding:20px 16px;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;z-index:2;overflow-y:auto;gap:0}
+.layout{display:flex;flex:1;min-height:0;overflow-y:auto}
+.sidebar{width:280px;min-width:280px;background:#fff;padding:20px 16px;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;z-index:2;gap:0}
 .sidebar h2{font-size:1rem;font-weight:700;color:#111}
 .sidebar .subtitle{font-size:.6875rem;color:#9ca3af;line-height:1.4}
 .collapsible{border-top:1px solid #f3f4f6}
@@ -772,6 +772,33 @@ loadQuestions().then(() => {
   loadDsKey();
 });
 
+// ── Double-click collapse ──
+// Double-click question sidebar → collapse/expand question body
+document.getElementById('sidebar-quiz').addEventListener('dblclick', function(e) {
+  // Don't fire when double-clicking sliders, buttons, inputs, or the collapsible header itself
+  const t = e.target;
+  if (t.closest('button') || t.closest('input') || t.closest('label') || t.closest('.collapsible-header')) return;
+  toggleSection('s-q-body');
+});
+// Double-click float card tabs → toggle active card body
+document.querySelectorAll('.float-card .card-tabs').forEach(tab => {
+  tab.addEventListener('dblclick', function(e) {
+    e.stopPropagation();
+    const card = this.closest('.float-card');
+    const tabId = activeCardTab;
+    const body = card.querySelector('#cbody-' + tabId);
+    if (!body) return;
+    if (body.style.display === 'none') {
+      body.style.display = '';
+      sharedCardH = null;
+    } else {
+      body.style.display = 'none';
+    }
+    autoFitCard();
+    saveSharedSize();
+  });
+});
+
 // ── Font scale ──
 const FONT_SCALE_KEY = 'stats_viz_font_scale';
 (function initFontScale() {
@@ -903,6 +930,7 @@ async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
   const cacheKey = q.id + ':' + optIdx;
   const hr = opt.graph ? opt.graph.hr : 0.60;
   const brate = opt.graph ? opt.graph.brate : 0.30;
+  const isFollowUp = !!(followUpText || forceRefresh);
 
   // ── Cache check — skip if forceRefresh or follow-up ──
   if (!forceRefresh && !followUpText) {
@@ -917,10 +945,21 @@ async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
     }
   }
 
-  // Store current state for voice follow-up
   lastAskState = { qIdx, optIdx, q, opt };
 
-  formulaEl.innerHTML = `<span class="body-text" style="display:flex;align-items:center;gap:6px"><i class="ti ti-loader" style="animation:spin 1s linear infinite;font-size:14px;display:inline-block"></i> ${followUpText ? 'Immersa is thinking...' : 'Asking Immersa...'}</span>`;
+  // ── Loading state: if card UI already exists, append thinking to chat instead of destroying ──
+  let thinkDiv = null;
+  if (isFollowUp && formulaEl.querySelector('.chat-history')) {
+    const chatHistoryEl = formulaEl.querySelector('.chat-history');
+    thinkDiv = document.createElement('div');
+    thinkDiv.className = 'chat-msg-attending thinking-msg';
+    thinkDiv.innerHTML = '<span class="chat-role">Immersa</span> <i class="ti ti-loader" style="animation:spin 1s linear infinite;font-size:12px;display:inline-block"></i> thinking...';
+    chatHistoryEl.appendChild(thinkDiv);
+    chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+    autoFitCard();
+  } else {
+    formulaEl.innerHTML = `<span class="body-text" style="display:flex;align-items:center;gap:6px"><i class="ti ti-loader" style="animation:spin 1s linear infinite;font-size:14px;display:inline-block"></i> Asking Immersa...</span>`;
+  }
   switchCardTab('formula');
 
   const baseMsg = `Question: ${q.stem}
@@ -933,7 +972,6 @@ Correct answer index: ${q.correct} (this option is index ${optIdx})
 
   let userMsg;
   if (followUpText) {
-    // Include chat history for context
     const historyLines = chatHistory.slice(-6).map(m => (m.role==='student'?'Student':'Attending')+': '+m.text).join('\n');
     userMsg = `${baseMsg}\n\nConversation so far:\n${historyLines}\n\nStudent's latest follow-up: "${followUpText}"\n\nRespond to the student's question directly. Be conversational. Stick to attending voice — mechanism-first, 3-5 sentences.`;
   } else {
@@ -961,21 +999,38 @@ Correct answer index: ${q.correct} (this option is index ${optIdx})
     const data = await r.json();
     const reply = data.choices?.[0]?.message?.content?.trim() || 'No response.';
 
-    // Save to cache (only the initial explanation, not chat follow-ups)
-    if (!followUpText) {
+    if (thinkDiv) {
+      // Follow-up / refresh — surgically update DOM without destroying card
+      thinkDiv.remove();
+      chatHistory.push({role:'attending', text: reply});
+      saveChatHistory(q.id, optIdx, chatHistory);
+      const chatHistoryEl = formulaEl.querySelector('.chat-history');
+      const replyDiv = document.createElement('div');
+      replyDiv.className = 'chat-msg-attending';
+      replyDiv.innerHTML = '<span class="chat-role">Immersa</span> ' + renderMath(reply);
+      chatHistoryEl.appendChild(replyDiv);
+      chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+      // Also update cache for future loads
       const cached = loadAttendingCache();
       cached[cacheKey] = reply;
       saveAttendingCache(cached);
-      chatHistory = []; // new option = fresh chat
     } else {
-      chatHistory.push({role:'attending', text: reply});
+      // First-time — rebuild entire card
+      if (!followUpText) {
+        const cached = loadAttendingCache();
+        cached[cacheKey] = reply;
+        saveAttendingCache(cached);
+        chatHistory = [];
+      } else {
+        chatHistory.push({role:'attending', text: reply});
+      }
+      saveChatHistory(q.id, optIdx, chatHistory);
+      formulaEl.innerHTML = buildFormulaCard(qIdx, optIdx, hr, opt.desc, reply, false);
     }
-    saveChatHistory(q.id, optIdx, chatHistory);
-
-    formulaEl.innerHTML = buildFormulaCard(qIdx, optIdx, hr, opt.desc, reply, false);
     autoFitCard();
   } catch (e) {
-    formulaEl.innerHTML = `<span class="body-text" style="color:#ef4444">Error: ${e.message}</span><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Retry</button>`;
+    if (thinkDiv) thinkDiv.remove();
+    formulaEl.innerHTML = '<span class="body-text" style="color:#ef4444">Error: ' + e.message + '</span><button class="ask-ai-btn" onclick="askDeepSeek(' + qIdx + ',' + optIdx + ',null,true)"><i class="ti ti-refresh"></i> Retry</button>';
   }
 }
 
