@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Statistical Visualizer</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -14,7 +15,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;color:#1a1a2e;height:100v
 html{font-size:17px}
 .top-bar{display:flex;align-items:center;padding:8px 20px;background:#fff;border-bottom:1px solid #e5e7eb;flex-shrink:0;gap:16px}
 .top-breadcrumb{font-family:'Inter',sans-serif;font-size:.75rem;font-weight:600;color:#1a1a2e;display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none}
-.top-breadcrumb svg{width:14px;height:14px;color:#9ca3af}
+.top-breadcrumb i{font-size:14px;color:#9ca3af;vertical-align:middle}
 .top-section-label{font-family:'Inter',sans-serif;font-size:.5625rem;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-right:auto;white-space:nowrap}
 .tab-bar{display:flex;align-items:center;gap:0;background:#fff;padding:0 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0}
 .tab-btn{padding:10px 16px;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:600;color:#9ca3af;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s}
@@ -33,7 +34,7 @@ html{font-size:17px}
 .collapsible:last-child{border-bottom:1px solid #f3f4f6}
 .collapsible-header{display:flex;align-items:center;justify-content:space-between;padding:10px 0;cursor:pointer;user-select:none;font-size:.6875rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em}
 .collapsible-header:hover{color:#374151}
-.collapsible-chevron{width:12px;height:12px;transition:transform .2s;opacity:.3}
+.collapsible-chevron{font-size:12px;transition:transform .2s;opacity:.3;display:inline-flex;align-items:center}
 .collapsible.open .collapsible-chevron{transform:rotate(180deg)}
 .collapsible-body{overflow:hidden;max-height:0;transition:max-height .25s ease}
 .collapsible.open .collapsible-body{max-height:600px;padding-bottom:10px}
@@ -138,9 +139,10 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 
 /* Voice input */
 .voice-row{display:flex;align-items:center;gap:8px;margin-top:8px}
-.mic-btn{width:32px;height:32px;border-radius:50%;border:1px solid #e5e7eb;background:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.mic-btn{width:32px;height:32px;border-radius:50%;border:1px solid #e5e7eb;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;color:#6b7280}
 .mic-btn:hover{background:#fef2f2;border-color:#fca5a5}
 .mic-btn.recording{background:#fee2e2;border-color:#ef4444;animation:pulse 1.5s ease-in-out infinite}
+.mic-btn.recording i{color:#ef4444}
 .voice-preview{font-size:.625rem;color:#9ca3af;font-style:italic;line-height:1.3;flex:1;min-width:0}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 6px rgba(239,68,68,0)}}
 
@@ -164,7 +166,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 <body>
 
 <div class="top-bar">
-  <span class="top-breadcrumb" id="top-breadcrumb">Oncology Biostats <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
+  <span class="top-breadcrumb" id="top-breadcrumb">Oncology Biostats <i class="ti ti-chevron-down" style="font-size:12px;color:#9ca3af;vertical-align:middle"></i></span>
   <span class="score-pill" id="score-pill"><span class="correct" id="score-correct">0</span><span class="slash">/</span><span id="score-total">0</span></span>
 </div>
 
@@ -182,7 +184,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
     <h2>Two Spikes</h2>
     <p class="subtitle" style="margin-bottom:14px">SE shrinks with n. ARR = gap between means.</p>
     <div class="collapsible open" id="s-arr">
-      <div class="collapsible-header" onclick="toggleSection('s-arr')">Controls<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="collapsible-header" onclick="toggleSection('s-arr')">Controls<i class="ti ti-chevron-down collapsible-chevron"></i></div>
       <div class="collapsible-body">
         <div class="control-group"><label>Sample Size <span class="value-display" id="n-val">30</span></label><input type="range" id="n-slider" min="1" max="1000" value="65"><span class="unit-hint">scales to 100k</span><span class="reset-hint">double-click to reset</span></div>
         <div class="control-group"><label>True Difference <span class="value-display" id="diff-val">2.0</span></label><input type="range" id="diff-slider" min="0" max="5" value="2" step="0.1"><span class="unit-hint">ARR (ppt)</span><span class="reset-hint">double-click to reset</span></div>
@@ -199,7 +201,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
     <h2>Hazard Ratio</h2>
     <div class="hr-def" style="margin-bottom:12px"><strong>HR</strong> = Hazard Ratio — compares the <strong>velocity</strong> (instantaneous rate) of an event in treatment vs control over time. HR &lt; 1 = treatment slows events.</div>
     <div class="collapsible open" id="s-hr">
-      <div class="collapsible-header" onclick="toggleSection('s-hr')">Controls<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="collapsible-header" onclick="toggleSection('s-hr')">Controls<i class="ti ti-chevron-down collapsible-chevron"></i></div>
       <div class="collapsible-body">
         <div class="control-group"><label>Hazard Ratio <span class="value-display" id="hr-val">0.60</span></label><input type="range" id="hr-slider" min="10" max="200" value="60"><span class="unit-hint">treatment / control</span><span class="reset-hint">double-click to reset</span></div>
         <div class="control-group"><label>Base Rate <span class="value-display" id="rate-val">0.30</span></label><input type="range" id="rate-slider" min="5" max="100" value="30"><span class="unit-hint">control events / time</span><span class="reset-hint">double-click to reset</span></div>
@@ -220,7 +222,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
     </div>
 
     <div class="collapsible open" id="s-q-body">
-      <div class="collapsible-header" onclick="toggleSection('s-q-body')">Question<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="collapsible-header" onclick="toggleSection('s-q-body')">Question<i class="ti ti-chevron-down collapsible-chevron"></i></div>
       <div class="collapsible-body">
         <div class="q-label">Advertisement</div>
         <div class="q-ad-text" id="q-ad"></div>
@@ -233,7 +235,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
     </div>
 
     <div class="collapsible" id="s-q-sliders">
-      <div class="collapsible-header" onclick="toggleSection('s-q-sliders')">Manual Sliders<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="collapsible-header" onclick="toggleSection('s-q-sliders')">Manual Sliders<i class="ti ti-chevron-down collapsible-chevron"></i></div>
       <div class="collapsible-body">
         <div class="control-group"><label>Hazard Ratio <span class="value-display" id="qz-hr-val">0.60</span></label><input type="range" id="qz-hr-slider" min="10" max="200" value="60"><span class="reset-hint">double-click to reset</span></div>
         <div class="control-group"><label>Base Rate <span class="value-display" id="qz-rate-val">0.30</span></label><input type="range" id="qz-rate-slider" min="5" max="100" value="30"><span class="reset-hint">double-click to reset</span></div>
@@ -241,12 +243,12 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
     </div>
 
     <div class="collapsible" id="s-q-tools">
-      <div class="collapsible-header" onclick="toggleSection('s-q-tools')">Tools &amp; JSON<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="collapsible-header" onclick="toggleSection('s-q-tools')">Tools &amp; JSON<i class="ti ti-chevron-down collapsible-chevron"></i></div>
       <div class="collapsible-body">
         <div class="q-json-row">
-          <button onclick="exportQuestions()">Export JSON</button>
-          <button onclick="importQuestions()">Import JSON</button>
-          <button onclick="copyQuestionsJSON()">Copy</button>
+          <button onclick="exportQuestions()"><i class="ti ti-download"></i> Export</button>
+          <button onclick="importQuestions()"><i class="ti ti-upload"></i> Import</button>
+          <button onclick="copyQuestionsJSON()"><i class="ti ti-copy"></i> Copy</button>
           <input type="file" id="json-import-file" accept=".json" style="display:none" onchange="handleImportFile(event)">
         </div>
         <div style="margin-top:8px">
@@ -258,13 +260,13 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
           <input type="password" id="ds-api-key" placeholder="DeepSeek API key" style="width:100%;padding:4px 8px;font-family:'Inter',sans-serif;font-size:.625rem;border:1px solid #e5e7eb;border-radius:4px">
           <span style="font-size:.5rem;color:#9ca3af">stored locally · <a href="#" onclick="document.getElementById('ds-api-key').value='';localStorage.removeItem('stats_viz_ds_key');return false" style="color:#9ca3af">clear</a></span>
         </div>
-        <button class="reset-btn" onclick="resetQuestions()" style="margin-top:6px;width:100%">Reset Progress</button>
+        <button class="reset-btn" onclick="resetQuestions()" style="margin-top:6px;width:100%"><i class="ti ti-rotate-clockwise"></i> Reset Progress</button>
       </div>
     </div>
 
     <div class="q-nav">
-      <button class="prev-btn" onclick="prevQuestion()" id="prev-btn">←</button>
-      <button class="next-btn" onclick="nextQuestion()" id="next-btn">Next →</button>
+      <button class="prev-btn" onclick="prevQuestion()" id="prev-btn"><i class="ti ti-chevron-left"></i></button>
+      <button class="next-btn" onclick="nextQuestion()" id="next-btn"><i class="ti ti-chevron-right"></i> Next</button>
     </div>
   </aside>
 
@@ -345,7 +347,7 @@ let questionsLoaded = false;
 
 async function loadQuestions() {
   try {
-    const r = await fetch('questions.json?v=' + Date.now());
+    const r = await fetch('stats_questions.json?v=' + Date.now());
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     if (!Array.isArray(data) || data.length === 0) throw new Error('Empty bank');
@@ -353,7 +355,7 @@ async function loadQuestions() {
     questionsLoaded = true;
     return true;
   } catch(e) {
-    console.warn('Failed to load questions.json, using empty bank:', e.message);
+    console.warn('Failed to load stats_questions.json, using empty bank:', e.message);
     return false;
   }
 }
@@ -457,7 +459,7 @@ function pickAnswer(i) {
     updateSlidersFromState();
     updateQuizGraph(); updateQuizCard();
     document.getElementById('cbody-formula').innerHTML =
-      renderMath('<span class="math-line">\\(HR = '+opt.graph.hr.toFixed(2)+' \\rightarrow 1.0 - '+opt.graph.hr.toFixed(2)+' = '+(1-opt.graph.hr).toFixed(2)+' = '+((1-opt.graph.hr)*100).toFixed(0)+'\\%\\text{ prevented}\\)</span><span class="body-text">'+renderMath(opt.desc)+'</span><button class="ask-ai-btn" onclick="askDeepSeek('+currentQ+','+i+')">Ask Immersa</button>');
+      renderMath('<span class="math-line">\\(HR = '+opt.graph.hr.toFixed(2)+' \\rightarrow 1.0 - '+opt.graph.hr.toFixed(2)+' = '+(1-opt.graph.hr).toFixed(2)+' = '+((1-opt.graph.hr)*100).toFixed(0)+'\\%\\text{ prevented}\\)</span><span class="body-text">'+renderMath(opt.desc)+'</span><button class="ask-ai-btn" onclick="askDeepSeek('+currentQ+','+i+')"><i class="ti ti-message"></i> Ask Immersa</button>');
     switchCardTab('formula');
     // Always show baseline comparison toggle
     showCompare = false;
@@ -760,7 +762,7 @@ document.getElementById('toggle-hr-ref').onchange=function(){chartHR.setDatasetV
 // Init — wait for questions to load first
 loadQuestions().then(() => {
   if (!questionsLoaded) {
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,sans-serif;font-size:1rem;color:#9ca3af">Questions file not found. Drop a questions.json next to this HTML file (or use the Import button).</div>';
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,sans-serif;font-size:1rem;color:#9ca3af">Questions file not found. Drop a stats_questions.json next to this HTML file (or use the Import button).</div>';
     return;
   }
   document.getElementById('card-hr').classList.add('card-hidden');
@@ -773,10 +775,10 @@ loadQuestions().then(() => {
 // ── Font scale ──
 const FONT_SCALE_KEY = 'stats_viz_font_scale';
 (function initFontScale() {
-  let scale = 1;
+  let scale = 1.15;
   try {
     const saved = localStorage.getItem(FONT_SCALE_KEY);
-    if (saved) scale = parseFloat(saved) || 1;
+    if (saved) scale = parseFloat(saved) || 1.15;
   } catch(e) {}
   document.documentElement.style.fontSize = (17 * scale) + 'px';
   document.getElementById('font-scale-slider').value = Math.round(scale * 100);
@@ -884,7 +886,7 @@ function buildFormulaCard(qIdx, optIdx, hr, desc, reply, fromCache) {
     });
     chatHTML += '</div>';
   }
-  return renderMath(`<span class="math-line">\\(HR = ${hr.toFixed(2)} \\rightarrow 1.0 - ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}\\%\\text{ prevented}\\)</span><span class="body-text">${renderMath(desc)}</span><div class="ai-reply"><div class="ai-reply-label">${label}</div>${renderedReply}</div>${chatHTML}<div class="chat-input-row"><input type="text" id="chat-input" class="chat-input" placeholder="Ask Immersa a follow-up..." onkeydown="if(event.key==='Enter')submitChat(${qIdx},${optIdx})"><button class="chat-send-btn" onclick="submitChat(${qIdx},${optIdx})">→</button></div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending">🎤</button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Refresh</button>`);
+  return renderMath(`<span class="math-line">\\(HR = ${hr.toFixed(2)} \\rightarrow 1.0 - ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}\\%\\text{ prevented}\\)</span><span class="body-text">${renderMath(desc)}</span><div class="ai-reply"><div class="ai-reply-label">${label}</div>${renderedReply}</div>${chatHTML}<div class="chat-input-row"><input type="text" id="chat-input" class="chat-input" placeholder="Ask Immersa a follow-up..." onkeydown="if(event.key==='Enter')submitChat(${qIdx},${optIdx})"><button class="chat-send-btn" onclick="submitChat(${qIdx},${optIdx})"><i class="ti ti-send" style="font-size:14px"></i></button></div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending"><i class="ti ti-microphone" style="font-size:16px"></i></button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)"><i class="ti ti-refresh"></i> Refresh</button>`);
 }
 
 async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
@@ -918,7 +920,7 @@ async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
   // Store current state for voice follow-up
   lastAskState = { qIdx, optIdx, q, opt };
 
-  formulaEl.innerHTML = `<span class="body-text" style="display:flex;align-items:center;gap:6px"><svg style="animation:spin 1s linear infinite;width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg> ${followUpText ? 'Immersa is thinking...' : 'Asking Immersa...'}</span>`;
+  formulaEl.innerHTML = `<span class="body-text" style="display:flex;align-items:center;gap:6px"><i class="ti ti-loader" style="animation:spin 1s linear infinite;font-size:14px;display:inline-block"></i> ${followUpText ? 'Immersa is thinking...' : 'Asking Immersa...'}</span>`;
   switchCardTab('formula');
 
   const baseMsg = `Question: ${q.stem}
@@ -995,7 +997,8 @@ function toggleVoice() {
 function startVoice() {
   voiceActive = true;
   const btn = document.getElementById('mic-btn');
-  if (btn) btn.innerHTML = '🔴';
+  if (btn) btn.innerHTML = '<i class="ti ti-microphone-filled" style="font-size:16px;color:#ef4444"></i>';
+  if (btn) btn.classList.add('recording');
   const prev = document.getElementById('voice-preview');
   if (prev) prev.innerText = 'Listening...';
 
@@ -1038,7 +1041,7 @@ function startVoice() {
       askDeepSeek(lastAskState.qIdx, lastAskState.optIdx, lastFinal.trim());
     }
     voiceActive = false;
-    if (btn) btn.innerHTML = '🎤';
+    if (btn) { btn.innerHTML = '<i class="ti ti-microphone" style="font-size:16px"></i>'; btn.classList.remove('recording'); }
     voiceRec = null;
   };
 
@@ -1048,7 +1051,7 @@ function startVoice() {
 function stopVoice() {
   voiceActive = false;
   const btn = document.getElementById('mic-btn');
-  if (btn) btn.innerHTML = '🎤';
+  if (btn) { btn.innerHTML = '<i class="ti ti-microphone" style="font-size:16px"></i>'; btn.classList.remove('recording'); }
   if (voiceRec) {
     try { voiceRec.stop(); } catch(e) {}
     voiceRec = null;

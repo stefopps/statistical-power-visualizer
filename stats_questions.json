@@ -1,0 +1,297 @@
+[
+  {
+    "id": 1,
+    "ad": "Take control of your fight against advanced lung cancer with OncoMab! In a landmark, randomized Phase III clinical trial, OncoMab delayed tumor growth significantly better than standard chemotherapy. The study reported a Hazard Ratio of 0.60 (95% CI: 0.48 - 0.82, p < 0.01) for Progression-Free Survival.",
+    "stem": "Q1a. Which is the most accurate interpretation of the Hazard Ratio (0.60)?",
+    "options": [
+      {
+        "label": "A",
+        "text": "At the end of the study, 40% of patients on OncoMab were completely free of tumors.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "A hazard ratio measures event velocity — the rate at which tumors progress per unit time. <strong>It has nothing to say about the final number of patients who end up tumor-free.</strong> That's an absolute endpoint, not a hazard. The 0.60 tells you treatment slowed the race, not who crossed the finish line."
+      },
+      {
+        "label": "B",
+        "text": "Patients on OncoMab have a 60% lower risk of tumor progression at any given time point.",
+        "graph": {
+          "hr": 0.4,
+          "brate": 0.3
+        },
+        "desc": "The reduction comes from subtracting HR from 1.0 — not from reading 0.60 as '60%.' <strong>A hazard ratio is a multiplier: 0.60 means the treatment group experiences events at 60% of the control group's rate. The eliminated portion is 1.0 − 0.60 = 0.40, or 40%.</strong> For this option to be true, you need HR = 0.40. Look at the graph — the gap is twice as wide because you've eliminated 60% of the hazard velocity."
+      },
+      {
+        "label": "C",
+        "text": "Patients on OncoMab have a 40% lower probability of tumor progression at any given time point.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "HR = 0.60 means treatment retains 60% of the control hazard velocity. The trimmed portion — the benefit — is 1.0 − 0.60 = 0.40. <strong>At every tick of the clock, patients on OncoMab face 40% less instantaneous risk.</strong> See the velocity bar: 60% kept, 40% eliminated."
+      },
+      {
+        "label": "D",
+        "text": "Median survival time for OncoMab patients is 40% longer than standard chemotherapy.",
+        "graph": {
+          "hr": 0.71,
+          "brate": 0.3
+        },
+        "desc": "<strong>Median survival and hazard ratio are connected but not interchangeable.</strong> If median were truly 40% longer, HR would be ≈ 1/1.4 ≈ 0.71 — the graph shows curves pulled closer together. Same 40% number, completely different thing: time extension vs velocity reduction."
+      },
+      {
+        "label": "E",
+        "text": "Patients on OncoMab are 0.60 times as likely to experience severe medication side effects.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "A hazard ratio is endpoint-specific. This trial's HR was calculated for Progression-Free Survival — the rate at which tumors grow. Side effects are a completely different endpoint with their own rates. <strong>Reusing the PFS hazard ratio for adverse events is like using a speedometer to measure fuel efficiency.</strong>"
+      }
+    ],
+    "correct": 2,
+    "baseGraph": {
+      "hr": 0.6,
+      "brate": 0.3
+    },
+    "explanation": "A hazard ratio is a velocity. HR = 0.60 means the treatment group accumulates events at 60% of the speed of the control group. The 40% eliminated is 1.0 − 0.60. Every percentage point trimmed is less hazard velocity carried forward.",
+    "trap": "The brain sees 0.60 and reaches for 60%. Don't. Subtract from 1.0. The hazard ratio is what you KEEP. The reduction is what you LOST."
+  },
+  {
+    "id": 2,
+    "ad": "New data shows CardioShield slashes heart attack risk! In a double-blind trial of 8,000 patients, the CardioShield group had 2.4% major cardiac events versus 3.0% in the placebo group (p = 0.03). The ad claims CardioShield 'reduces heart attack risk by 20%.'",
+    "stem": "Q2a. What measure is the 20% figure, and what is the absolute benefit?",
+    "options": [
+      {
+        "label": "A",
+        "text": "The advertisement reports the absolute risk reduction (ARR) of 0.6 percentage points correctly.",
+        "graph": {
+          "hr": 0.8,
+          "brate": 0.3
+        },
+        "desc": "ARR = 3.0% − 2.4% = 0.6 ppt. That's the absolute gap. But the ad says 20% — which is the relative calculation: (3.0% − 2.4%) / 3.0% = 0.6/3.0 = 20%. <strong>The ad reports RRR, not ARR. It exploits a perceptual hack: 20% sounds enormous, 0.6 ppt sounds trivial. Same trial.</strong>"
+      },
+      {
+        "label": "B",
+        "text": "The advertisement reports relative risk reduction (RRR) of 20%, but the ARR is only 0.6 ppt and NNT is approximately 167.",
+        "graph": {
+          "hr": 0.8,
+          "brate": 0.3
+        },
+        "desc": "RRR = (3.0% − 2.4%) / 3.0% = 20%. The absolute difference is 0.6 ppt — a sliver. NNT = 1/0.006 ≈ 167. <strong>You need to treat 167 people to prevent ONE cardiac event. The other 166 get the drug, pay the cost, bear side effects, and get zero benefit.</strong>"
+      },
+      {
+        "label": "C",
+        "text": "The hazard ratio of 0.80 means an 80% reduction in events.",
+        "graph": {
+          "hr": 0.8,
+          "brate": 0.3
+        },
+        "desc": "Same error as Q1 — the brain sees 0.80 and reaches for 80%. <strong>HR = 0.80 means treatment retains 80% of control hazard. Only 20% gets eliminated.</strong> 1.0 − 0.80 = 0.20. The velocity bar shows a sliver of red (20% trimmed) against a wall of blue (80% kept)."
+      },
+      {
+        "label": "D",
+        "text": "The p-value of 0.03 confirms the 20% reduction is both statistically and clinically significant.",
+        "graph": {
+          "hr": 0.8,
+          "brate": 0.3
+        },
+        "desc": "The p-value answers one question: could this be chance? At p=0.03, probably not. But it says nothing about clinical importance. An ARR of 0.6 ppt may be statistically detectable but clinically meaningless. <strong>Statistical significance ≠ clinical significance.</strong>"
+      },
+      {
+        "label": "E",
+        "text": "The NNT is 20, meaning 20 patients need treatment to prevent one event.",
+        "graph": {
+          "hr": 0.8,
+          "brate": 0.3
+        },
+        "desc": "NNT = 1/0.006 ≈ 167, not 20. To get NNT=20 you'd need ARR=5 ppt — impossible given the baseline rate is only 3.0%. <strong>Always verify NNT against baseline.</strong>"
+      }
+    ],
+    "correct": 1,
+    "baseGraph": {
+      "hr": 0.8,
+      "brate": 0.3
+    },
+    "explanation": "Relative risk is a ratio. Absolute risk is a subtraction. Ratios look bigger than subtractions when the baseline is small. That's the entire trick. The ad gives you the ratio (20%) and hopes you never ask about the subtraction (0.6 ppt).",
+    "trap": "Whenever a drug ad gives a percentage, ask: 'Relative to what?' If they conceal the baseline rates, they're hiding the absolute benefit behind the relative framing."
+  },
+  {
+    "id": 3,
+    "ad": "BREAKING: VitaBoost shown to improve memory in aging adults! In a 12-week study of 120 participants, those taking VitaBoost scored 2.1 points higher on a cognitive assessment (95% CI: 0.1 – 4.1, p = 0.04) compared to placebo. The ad states: 'Clinically proven to boost brain function.'",
+    "stem": "Q3a. Which concern about this claim is most justified?",
+    "options": [
+      {
+        "label": "A",
+        "text": "The p-value of 0.04 definitively proves VitaBoost works, and the 2.1 point improvement is clinically meaningful.",
+        "graph": {
+          "hr": 0.9,
+          "brate": 0.25
+        },
+        "desc": "<strong>p=0.04 means '4% chance this is random noise.' It doesn't measure effect size.</strong> A 2.1 point gain might be a rounding error — or transformative. The p-value doesn't distinguish. HR=0.90 shows the effect is narrow: only 10% trimmed. That's a faint signal."
+      },
+      {
+        "label": "B",
+        "text": "The sample size is too small to detect any effect, so the study should not have been published.",
+        "graph": {
+          "hr": 0.9,
+          "brate": 0.25
+        },
+        "desc": "N=120 can detect moderate effects just fine. The study DID detect an effect (p=0.04). The issue isn't detection — it's that the detected effect is tiny. <strong>Small samples detect big effects; big samples detect trivial ones. This is the latter.</strong>"
+      },
+      {
+        "label": "C",
+        "text": "The confidence interval (0.1 to 4.1) barely excludes zero, suggesting a marginal effect that may not be clinically meaningful.",
+        "graph": {
+          "hr": 0.9,
+          "brate": 0.25
+        },
+        "desc": "The 95% CI runs 0.1 to 4.1. The lower bound practically touches zero — meaning the true effect could be a fraction of a point. <strong>When the lower boundary of your confidence interval is a rounding error away from nothing, 'clinically proven' is reckless.</strong> The curves nearly overlap because HR=0.90 means 90% of the hazard remains."
+      },
+      {
+        "label": "D",
+        "text": "Since this was only a 12-week study, results cannot be generalized to any population.",
+        "graph": {
+          "hr": 0.9,
+          "brate": 0.25
+        },
+        "desc": "Duration limits generalizability, but 'cannot be generalized to ANY population' is extreme. The deeper problem: even within the studied population, the effect might be trivial. <strong>Generalizability is secondary when the finding itself may not matter.</strong>"
+      },
+      {
+        "label": "E",
+        "text": "The cognitive assessment used the wrong scale; results should be in standard deviations.",
+        "graph": {
+          "hr": 0.9,
+          "brate": 0.25
+        },
+        "desc": "Standardized effect sizes have value, but raw scale points matter too — 2.1 points on a 30-point MMSE is different from 2.1 on a 300-point battery. <strong>The real problem isn't the measurement scale — it's that the CI barely excludes zero regardless of units.</strong>"
+      }
+    ],
+    "correct": 2,
+    "baseGraph": {
+      "hr": 0.9,
+      "brate": 0.25
+    },
+    "explanation": "A CI that barely excludes zero is a warning. The true effect is somewhere between 'barely detectable' and 'moderate.' Statistical significance rules out chance — it doesn't rule out triviality. The CI width tells you about precision; the lower bound tells you the worst plausible scenario.",
+    "trap": "A p-value whispers 'this probably isn't noise.' A CI shouts 'but it might also be nothing.' Listen to the CI."
+  },
+  {
+    "id": 4,
+    "ad": "Take control of your fight against advanced lung cancer with OncoMab! In a landmark, randomized Phase III clinical trial, OncoMab delayed tumor growth significantly better than standard chemotherapy. The study reported a Hazard Ratio of 0.60 (95% CI: 0.48 - 0.82, p < 0.01) for Progression-Free Survival.",
+    "stem": "Q1b. A critical physician notes a limitation in how efficacy is presented. Why is 'live your life uninterrupted' misleading based on the trial's chosen metric?",
+    "options": [
+      {
+        "label": "A",
+        "text": "The study relies on a surrogate endpoint that does not guarantee improved overall survival.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "PFS is a surrogate — it measures tumor growth, not how long the patient lives. A drug can shrink tumors on a scan without adding a single day of life. The FDA accepts PFS for accelerated approval precisely because it's faster to measure than overall survival — but the tradeoff is you don't know whether the patient actually lives longer. The ad's promise of 'uninterrupted life' leaps from tumor shrinkage to life extension without evidence for the latter."
+      },
+      {
+        "label": "B",
+        "text": "The confidence interval is too wide to establish a clinically meaningful difference in quality of life.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "The CI (0.48–0.82) is actually reasonable for a Phase III oncology trial. The problem isn't precision — it's that the CI bounds a surrogate endpoint, not overall survival. A tight CI around the wrong target is still measuring the wrong thing. The issue is endpoint validity, not statistical precision."
+      },
+      {
+        "label": "C",
+        "text": "Progression-free survival inherently suffers from lead-time bias, falsely extending the perceived survival time.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "Lead-time bias applies to screening studies — earlier detection makes survival look longer because you started the clock sooner, not because death came later. This trial randomized patients at diagnosis and started the clock at the same point for both arms. Lead-time bias has no mechanism here. The real limitation is that PFS is a surrogate, not that the clock started wrong."
+      },
+      {
+        "label": "D",
+        "text": "A p-value of less than 0.01 indicates a high probability of a Type I error regarding the drug's actual benefits.",
+        "graph": {
+          "hr": 1,
+          "brate": 0.3
+        },
+        "desc": "p < 0.01 means the probability of a Type I error is LOW — below 1%. That's the whole point of a small p-value: it makes a false positive unlikely. This option reverses the meaning entirely. The graph shows HR=1.0 (no treatment effect at all) — that's what a Type I error would look like: claiming benefit where none exists. But with p < 0.01, that's extremely unlikely."
+      },
+      {
+        "label": "E",
+        "text": "The study failed to utilize a placebo group, invalidating the comparative hazard ratio.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "The trial used standard chemotherapy as the active comparator — that's valid for a superiority trial in advanced cancer. Giving a dying patient a placebo when an approved treatment exists would be unethical. The comparison to standard of care is exactly what a Phase III trial should do. The limitation isn't the control arm — it's the endpoint measured."
+      }
+    ],
+    "correct": 0,
+    "baseGraph": {
+      "hr": 0.6,
+      "brate": 0.3
+    },
+    "explanation": "A PFS benefit tells you the tumor stayed smaller longer. It does not tell you the patient lived longer or felt better. Surrogate endpoints accelerate trials — but they can't replace the endpoints patients actually care about: survival and quality of life.",
+    "trap": "When an ad says 'live your life uninterrupted' but the trial measured tumor size, ask: did they measure life? Did they measure quality? If not, the claim outruns the evidence."
+  },
+  {
+    "id": 5,
+    "ad": "Take control of your fight against advanced lung cancer with OncoMab! In a landmark, randomized Phase III clinical trial, OncoMab delayed tumor growth significantly better than standard chemotherapy. The study reported a Hazard Ratio of 0.60 (95% CI: 0.48 - 0.82, p < 0.01) for Progression-Free Survival.",
+    "stem": "Q1c. You review the supplementary Kaplan-Meier curves and notice the OncoMab and chemotherapy curves cross at 12 months. Which statistical assumption does this violate?",
+    "options": [
+      {
+        "label": "A",
+        "text": "The assumption of normally distributed data.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "The Cox proportional hazards model is semi-parametric — it makes no assumption about the shape of the baseline hazard or the distribution of survival times. That's the entire point of using Cox over parametric survival models. Normally distributed data is an assumption for t-tests and linear regression, not for Cox regression. Crossing curves tell you something else is broken."
+      },
+      {
+        "label": "B",
+        "text": "The assumption of proportional hazards.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "Proportional hazards means the hazard ratio between groups is constant at every point in time. If the curves cross at 12 months, the treatment was worse early (hazard ratio above 1.0) and better late (hazard ratio below 1.0) — or vice versa. A single HR of 0.60 can't describe a relationship that flips direction. The reported number averages across time, hiding the violation. The Cox model doesn't require hazards to be proportional — it requires you to CHECK whether they are. Crossing curves fail the check."
+      },
+      {
+        "label": "C",
+        "text": "The assumption of independent observations.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "Independence means one patient's outcome doesn't influence another patient's outcome. It's enforced by study design — randomization, individual enrollment, no clustering. Crossing survival curves tell you nothing about whether patients were observed independently. Independence violations (like treating two eyes from the same patient as independent data points) require different statistical methods, but they don't produce crossing KM curves."
+      },
+      {
+        "label": "D",
+        "text": "The assumption of intention-to-treat.",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "Intention-to-treat is an analysis principle, not a model assumption. It means you analyze patients in the group they were randomized to, regardless of whether they actually received the treatment. ITT protects against selection bias — it has nothing to say about the shape of the survival curves. Crossing curves are a model-level violation, not a design-level one."
+      },
+      {
+        "label": "E",
+        "text": "The assumption of equal variances (homoscedasticity).",
+        "graph": {
+          "hr": 0.6,
+          "brate": 0.3
+        },
+        "desc": "Homoscedasticity — equal variance across groups — is an assumption for linear regression and ANOVA. It concerns the spread of residuals, not the relationship of hazards over time. Survival analysis doesn't assume equal variances in any comparable sense. The Cox model cares about whether the hazard ratio is stable across time, not whether the variance is stable across groups."
+      }
+    ],
+    "correct": 1,
+    "baseGraph": {
+      "hr": 0.6,
+      "brate": 0.3
+    },
+    "explanation": "A single hazard ratio is a summary across all time points. If the curves cross, the summary is a lie — the treatment effect changes over time, sometimes favoring one group, sometimes the other. The proportional hazards assumption is the gatekeeper: HR is only interpretable when it's stable.",
+    "trap": "The brain sees crossing lines and thinks 'variance problem' or 'data issue.' Stop. Crossing curves = non-proportional hazards. The HR you're reading is an average that masks a time-dependent effect. Always ask: did they test the proportional hazards assumption? If curves crossed and they didn't report Schoenfeld residuals or a time-interaction test, the HR is unreliable."
+  }
+]
