@@ -819,6 +819,17 @@ function renderMath(html) {
 
 // ── Chat state ──
 let chatHistory = []; // {role:'student'|'attending', text:string}[]
+const CHAT_KEY_PREFIX = 'stats_viz_chat_';
+
+function chatStorageKey(qId, optIdx) { return CHAT_KEY_PREFIX + qId + '_' + optIdx; }
+function loadChatHistory(qId, optIdx) {
+  try { const r = localStorage.getItem(chatStorageKey(qId, optIdx)); return r ? JSON.parse(r) : []; }
+  catch(e) { return []; }
+}
+function saveChatHistory(qId, optIdx, history) {
+  try { localStorage.setItem(chatStorageKey(qId, optIdx), JSON.stringify(history)); }
+  catch(e) { /* quota exceeded, ignore */ }
+}
 
 async function submitChat(qIdx, optIdx) {
   const inp = document.getElementById('chat-input');
@@ -826,6 +837,7 @@ async function submitChat(qIdx, optIdx) {
   const text = inp.value.trim();
   inp.value = '';
   chatHistory.push({role:'student', text});
+  saveChatHistory(QUESTION_BANK[qIdx].id, optIdx, chatHistory);
   askDeepSeek(qIdx, optIdx, text, true);
 }
 
@@ -865,7 +877,7 @@ async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
   if (!forceRefresh && !followUpText) {
     const cached = loadAttendingCache();
     if (cached[cacheKey]) {
-      chatHistory = []; // new option = fresh chat
+      chatHistory = loadChatHistory(q.id, optIdx);
       formulaEl.innerHTML = buildFormulaCard(qIdx, optIdx, hr, opt.desc, cached[cacheKey], true);
       switchCardTab('formula');
       lastAskState = { qIdx, optIdx, q, opt };
@@ -926,6 +938,7 @@ Correct answer index: ${q.correct} (this option is index ${optIdx})
     } else {
       chatHistory.push({role:'attending', text: reply});
     }
+    saveChatHistory(q.id, optIdx, chatHistory);
 
     formulaEl.innerHTML = buildFormulaCard(qIdx, optIdx, hr, opt.desc, reply, false);
   } catch (e) {
@@ -989,6 +1002,8 @@ function startVoice() {
     if (!voiceActive) return;
     if (lastFinal.trim() && lastAskState) {
       if (prev) prev.innerText = 'Sending...';
+      chatHistory.push({role:'student', text: lastFinal.trim()});
+      saveChatHistory(lastAskState.q.id, lastAskState.optIdx, chatHistory);
       askDeepSeek(lastAskState.qIdx, lastAskState.optIdx, lastFinal.trim());
     }
     voiceActive = false;
