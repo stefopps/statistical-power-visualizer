@@ -720,12 +720,12 @@ const FONT_SCALE_KEY = 'stats_viz_font_scale';
   } catch(e) {}
   document.documentElement.style.fontSize = (17 * scale) + 'px';
   document.getElementById('font-scale-slider').value = Math.round(scale * 100);
-  document.getElementById('font-scale-label').innerText = Math.round(scale * 100) + '%';
+  document.getElementById('font-size-label').innerText = Math.round(scale * 100) + '%';
   document.getElementById('font-scale-slider').oninput = function () {
     const pct = parseInt(this.value);
     scale = pct / 100;
     document.documentElement.style.fontSize = (17 * scale) + 'px';
-    document.getElementById('font-scale-label').innerText = pct + '%';
+    document.getElementById('font-size-label').innerText = pct + '%';
   };
   document.getElementById('font-scale-slider').onchange = function () {
     localStorage.setItem(FONT_SCALE_KEY, scale);
@@ -735,12 +735,15 @@ const FONT_SCALE_KEY = 'stats_viz_font_scale';
     this.value = 100;
     scale = 1;
     document.documentElement.style.fontSize = '17px';
-    document.getElementById('font-scale-label').innerText = '100%';
+    document.getElementById('font-size-label').innerText = '100%';
     localStorage.setItem(FONT_SCALE_KEY, 1);
   };
 })();
 
 // ── DeepSeek Integration (wired from MeWorld pattern) ──
+
+// ── Voice input (MeWorld SpeechRecognition pattern) ──
+let voiceRec = null, voiceActive = false, lastAskState = null;
 
 function loadDsKey() {
   const saved = localStorage.getItem('stats_viz_ds_key');
@@ -822,8 +825,7 @@ Correct answer index: ${q.correct} (this option is index ${optIdx})
   }
 }
 
-// ── Voice input (MeWorld SpeechRecognition pattern) ──
-let voiceRec = null, voiceActive = false, lastAskState = null;
+// ── Voice functions ──
 
 function speechSupported() {
   return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
