@@ -437,7 +437,7 @@ function pickAnswer(i) {
     updateSlidersFromState();
     updateQuizGraph(); updateQuizCard();
     document.getElementById('cbody-formula').innerHTML =
-      '<span class="math-line">HR='+opt.graph.hr.toFixed(2)+' → 1.0 − '+opt.graph.hr.toFixed(2)+' = '+(1-opt.graph.hr).toFixed(2)+' = '+((1-opt.graph.hr)*100).toFixed(0)+'% prevented</span><span class="body-text">'+renderMath(opt.desc)+'</span><button class="ask-ai-btn" onclick="askDeepSeek('+currentQ+','+i+')">Ask Immersa</button>';
+      renderMath('<span class="math-line">\\(HR = '+opt.graph.hr.toFixed(2)+' \\rightarrow 1.0 - '+opt.graph.hr.toFixed(2)+' = '+(1-opt.graph.hr).toFixed(2)+' = '+((1-opt.graph.hr)*100).toFixed(0)+'\\%\\text{ prevented}\\)</span><span class="body-text">'+renderMath(opt.desc)+'</span><button class="ask-ai-btn" onclick="askDeepSeek('+currentQ+','+i+')">Ask Immersa</button>');
     switchCardTab('formula');
   }
 
@@ -824,11 +824,12 @@ function buildFormulaCard(qIdx, optIdx, hr, desc, reply, fromCache) {
     chatHTML = '<div class="chat-history">';
     chatHistory.forEach(m => {
       const cls = m.role === 'student' ? 'chat-msg-student' : 'chat-msg-attending';
-      chatHTML += '<div class="'+cls+'"><span class="chat-role">'+(m.role==='student'?'You':'Immersa')+'</span> '+renderMath(m.text)+'</div>';
+      const label = m.role === 'student' ? 'You' : 'Immersa';
+      chatHTML += '<div class="'+cls+'"><span class="chat-role">'+label+'</span> '+renderMath(m.text)+'</div>';
     });
     chatHTML += '</div>';
   }
-  return `<span class="math-line">HR=${hr.toFixed(2)} → 1.0 − ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}% prevented</span><span class="body-text">${renderMath(desc)}</span><div class="ai-reply"><div class="ai-reply-label">${label}</div>${renderedReply}</div>${chatHTML}<div class="chat-input-row"><input type="text" id="chat-input" class="chat-input" placeholder="Ask Immersa a follow-up..." onkeydown="if(event.key==='Enter')submitChat(${qIdx},${optIdx})"><button class="chat-send-btn" onclick="submitChat(${qIdx},${optIdx})">→</button></div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending">🎤</button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Refresh</button>`;
+  return renderMath(`<span class="math-line">\\(HR = ${hr.toFixed(2)} \\rightarrow 1.0 - ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}\\%\\text{ prevented}\\)</span><span class="body-text">${renderMath(desc)}</span><div class="ai-reply"><div class="ai-reply-label">${label}</div>${renderedReply}</div>${chatHTML}<div class="chat-input-row"><input type="text" id="chat-input" class="chat-input" placeholder="Ask Immersa a follow-up..." onkeydown="if(event.key==='Enter')submitChat(${qIdx},${optIdx})"><button class="chat-send-btn" onclick="submitChat(${qIdx},${optIdx})">→</button></div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending">🎤</button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Refresh</button>`);
 }
 
 async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
