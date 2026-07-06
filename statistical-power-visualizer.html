@@ -708,6 +708,7 @@ loadQuestions().then(() => {
   renderQuestion();
   updateARR();updateARRCard();updateHR();updateHRCard();updateQuizGraph();updateQuizCard();updateScorePill();
   loadDsKey();
+});
 
 // ── Font scale ──
 const FONT_SCALE_KEY = 'stats_viz_font_scale';
@@ -897,7 +898,6 @@ function stopVoice() {
     voiceRec = null;
   }
 }
-}); // end loadQuestions().then()
 </script>
 </body>
 </html>
