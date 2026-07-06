@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statistical Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#f5f5f5;color:#1a1a2e;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+html{font-size:17px}
+.tab-bar{display:flex;padding:0 20px;background:#fff;border-bottom:1px solid #e5e7eb;flex-shrink:0;align-items:center}
+.tab-btn{padding:12px 20px;font-family:'Inter',sans-serif;font-size:.8125rem;font-weight:600;color:#9ca3af;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer}
+.tab-btn:hover{color:#4b5563}
+.tab-btn.active{color:#2563eb;border-bottom-color:#2563eb}
+.tab-spacer{flex:1}
+.score-pill{font-size:.6875rem;font-weight:600;color:#6b7280;padding:3px 10px;background:#f3f4f6;border-radius:10px;display:none}
+.score-pill.show{display:block}
+.score-pill .correct{color:#22c55e}
+.layout{display:flex;flex:1;min-height:0}
+.sidebar{width:280px;min-width:280px;background:#fff;padding:20px 16px;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;z-index:2;overflow-y:auto;gap:0}
+.sidebar h2{font-size:1rem;font-weight:700;color:#111}
+.sidebar .subtitle{font-size:.6875rem;color:#9ca3af;line-height:1.4}
+.collapsible{border-top:1px solid #f3f4f6}
+.collapsible:last-child{border-bottom:1px solid #f3f4f6}
+.collapsible-header{display:flex;align-items:center;justify-content:space-between;padding:10px 0;cursor:pointer;user-select:none;font-size:.6875rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em}
+.collapsible-header:hover{color:#374151}
+.collapsible-chevron{width:12px;height:12px;transition:transform .2s;opacity:.3}
+.collapsible.open .collapsible-chevron{transform:rotate(180deg)}
+.collapsible-body{overflow:hidden;max-height:0;transition:max-height .25s ease}
+.collapsible.open .collapsible-body{max-height:600px;padding-bottom:10px}
+.control-group{display:flex;flex-direction:column;gap:2px;margin-bottom:12px}
+.control-group:last-child{margin-bottom:0}
+.control-group label{font-size:.6875rem;font-weight:600;color:#374151;display:flex;justify-content:space-between;align-items:baseline}
+.value-display{font-size:1.25rem;font-weight:700;color:#2563eb}
+.unit-hint{font-size:.5625rem;color:#9ca3af}
+.reset-hint{font-size:.5rem;color:#d1d5db;text-align:right;font-style:italic}
+input[type=range]{width:100%;cursor:pointer;appearance:none;height:4px;background:#e5e7eb;border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;background:#2563eb;border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.toggle-group{display:flex;flex-direction:column;gap:6px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between}
+.toggle-label{font-size:.6875rem;font-weight:500;color:#4b5563}
+.toggle-switch{position:relative;width:36px;height:18px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#d1d5db;transition:.2s;border-radius:18px}
+.toggle-slider:before{content:"";position:absolute;height:12px;width:12px;left:3px;bottom:3px;background:#fff;transition:.2s;border-radius:50%}
+input:checked+.toggle-slider{background:#2563eb}
+input:checked+.toggle-slider:before{transform:translateX(18px)}
+
+.main{flex:1;display:flex;flex-direction:column;padding:20px;min-width:0}
+.chart-area{flex:1;position:relative;background:#fff;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.04);min-height:0}
+.chart-panel{display:none;position:absolute;inset:20px}
+.chart-panel.active{display:block}
+.chart-panel canvas{width:100%!important;height:100%!important}
+
+/* ── Floating card — the command center ── */
+.float-card{position:absolute;z-index:10;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border:1px solid #e5e7eb;border-radius:10px;min-width:140px;box-shadow:0 2px 16px rgba(0,0,0,.06);user-select:none;overflow:hidden}
+.float-card:active{cursor:default}
+.float-card .card-tabs{display:flex;border-bottom:1px solid #f3f4f6}
+.float-card .card-tab{padding:10px 16px;font-family:'Inter',sans-serif;font-size:.6875rem;font-weight:600;color:#9ca3af;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;flex:1}
+.float-card .card-tab:hover{color:#4b5563}
+.float-card .card-tab.active{color:#2563eb;border-bottom-color:#2563eb}
+.float-card .card-body .math-line{font-weight:700;color:#2563eb;margin-bottom:6px;display:block}
+.float-card .card-body .body-text{color:#374151;margin-bottom:8px;display:block}
+.float-card .card-body .answer-correct{color:#166534}
+.float-card .card-body .answer-wrong{color:#991b1b}
+.float-card .card-body .trap-note{margin-top:6px;padding:6px 8px;background:#fff3cd;border-radius:4px;color:#92400e;font-size:.625rem}
+.float-card .card-body .empty{color:#9ca3af;font-style:italic;text-align:center;padding:12px 0;font-size:.6875rem}
+.float-card .stats-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:.6875rem}
+.float-card .stats-row .key{color:#9ca3af;font-weight:600;font-size:.5625rem;text-transform:uppercase}
+.float-card .stats-row .val{font-weight:700;color:#2563eb;font-size:.75rem}
+.float-card .stats-row .val.green{color:#22c55e}
+.float-card .stats-row .val.red{color:#ef4444}
+.float-card .drag-handle{font-size:.5625rem;color:#d1d5db;text-align:center;padding:6px 0 4px;letter-spacing:.04em;text-transform:uppercase;cursor:grab}
+.float-card .drag-handle:active{cursor:grabbing}
+.float-card .resize-handle{position:absolute;bottom:0;right:0;width:14px;height:14px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,#d1d5db 50%);border-radius:0 0 10px 0;opacity:.4;transition:opacity .15s}
+.float-card .resize-handle:hover{opacity:.8}
+.float-card .card-body{padding:18px 20px;overflow-y:auto;font-size:.6875rem;line-height:1.6;min-height:40px;max-height:300px}
+.card-hidden{display:none}
+
+/* ── Quiz sidebar ── */
+.q-sidebar{width:340px;min-width:340px}
+.q-option{display:block;width:100%;text-align:left;padding:8px 10px;margin-bottom:4px;font-family:'Inter',sans-serif;font-size:.6875rem;color:#374151;background:#fff;border:1px solid #e5e7eb;border-radius:5px;cursor:pointer;transition:all .12s;line-height:1.4}
+.q-option:hover{background:#f0f4ff;border-color:#93c5fd}
+.q-option.locked{pointer-events:none;opacity:.7}
+.q-option.correct-flash.locked{opacity:1;background:#dcfce7;border-color:#22c55e;color:#166534}
+.q-option.wrong-flash.locked{opacity:1;background:#fee2e2;border-color:#ef4444;color:#991b1b}
+.q-nav{display:flex;gap:6px;margin-top:8px;align-items:center}
+.q-nav button{padding:6px 12px;font-family:'Inter',sans-serif;font-size:.6875rem;font-weight:600;border-radius:5px;cursor:pointer;border:none}
+.q-nav .next-btn{background:#2563eb;color:#fff}
+.q-nav .next-btn:hover{background:#1d4ed8}
+.q-nav .prev-btn{background:#f3f4f6;color:#374151}
+.q-nav .prev-btn:hover{background:#e5e7eb}
+.q-nav .reset-btn{background:none;color:#9ca3af;font-size:.625rem;border:1px solid #e5e7eb}
+.q-nav .reset-btn:hover{color:#6b7280}
+.q-json-row{display:flex;gap:4px;margin-top:6px}
+.q-json-row button{padding:3px 8px;font-family:'Inter',sans-serif;font-size:.5625rem;font-weight:500;border-radius:4px;cursor:pointer;background:#f9fafb;color:#9ca3af;border:1px solid #e5e7eb}
+.q-json-row button:hover{background:#f3f4f6;color:#6b7280}
+/* inline mode toggle in header */
+.mode-toggle-inline{display:inline-flex;align-items:center;gap:0;margin-left:auto;margin-right:10px;cursor:pointer;font-family:'Inter',sans-serif}
+.mode-toggle-inline input{opacity:0;width:0;height:0}
+.toggle-slider-sm{position:relative;display:inline-block;width:28px;height:14px;background:#d1d5db;border-radius:14px;transition:background .2s}
+.toggle-slider-sm:before{content:"";position:absolute;height:10px;width:10px;left:2px;bottom:2px;background:#fff;border-radius:50%;transition:transform .2s}
+.mode-toggle-inline input:checked+.toggle-slider-sm{background:#2563eb}
+.mode-toggle-inline input:checked+.toggle-slider-sm:before{transform:translateX(14px)}
+
+.q-mode-bar{display:none}
+.q-progress{font-size:.625rem;color:#9ca3af}
+.show-trap-btn{font-size:.5625rem;color:#f87171;background:none;border:1px solid #fecaca;border-radius:3px;padding:3px 6px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px}
+.show-trap-btn:hover{background:#fef2f2}
+.hr-def{font-size:.5625rem;color:#9ca3af;line-height:1.4;padding:6px 8px;background:#f9fafb;border-radius:4px;border-left:2px solid #e5e7eb}
+.hr-def strong{color:#6b7280}
+
+/* DeepSeek AI integration */
+.ask-ai-btn{display:block;width:100%;padding:7px 10px;margin-top:10px;font-family:'Inter',sans-serif;font-size:.5625rem;font-weight:600;background:#f3f0ff;color:#7c3aed;border:1px solid #ddcefe;border-radius:4px;cursor:pointer;transition:background .15s}
+.ask-ai-btn:hover{background:#ede5ff}
+.ai-reply{margin-top:10px;padding:10px 12px;background:#faf8ff;border-left:2px solid #7c3aed;border-radius:0 4px 4px 0;font-size:.625rem;line-height:1.5;color:#374151;font-family:'Inter',sans-serif}
+.ai-reply-label{font-size:.4375rem;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;margin-bottom:4px;}
+.ai-reply :first-child{margin-top:0}
+.ai-reply p{margin:0 0 4px;color:#374151}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('arr')">ARR / Two Spikes</button>
+  <button class="tab-btn" onclick="switchTab('hr')">Hazard Ratio</button>
+  <button class="tab-btn" onclick="switchTab('quiz')">Questions</button>
+  <span class="tab-spacer"></span>
+  <span class="score-pill" id="score-pill"><span class="correct" id="score-correct">0</span>/<span id="score-total">0</span></span>
+</div>
+
+<div class="layout">
+
+  <!-- ARR sidebar -->
+  <aside class="sidebar" id="sidebar-arr">
+    <h2>Two Spikes</h2>
+    <p class="subtitle" style="margin-bottom:14px">SE shrinks with n. ARR = gap between means.</p>
+    <div class="collapsible open" id="s-arr">
+      <div class="collapsible-header" onclick="toggleSection('s-arr')">Controls<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="collapsible-body">
+        <div class="control-group"><label>Sample Size <span class="value-display" id="n-val">30</span></label><input type="range" id="n-slider" min="1" max="1000" value="65"><span class="unit-hint">scales to 100k</span><span class="reset-hint">double-click to reset</span></div>
+        <div class="control-group"><label>True Difference <span class="value-display" id="diff-val">2.0</span></label><input type="range" id="diff-slider" min="0" max="5" value="2" step="0.1"><span class="unit-hint">ARR (ppt)</span><span class="reset-hint">double-click to reset</span></div>
+        <div class="toggle-group">
+          <div class="toggle-row"><span class="toggle-label">Show Means</span><label class="toggle-switch"><input type="checkbox" id="toggle-means" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label">Show ARR Overlay</span><label class="toggle-switch"><input type="checkbox" id="toggle-arr" checked><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HR sidebar -->
+  <aside class="sidebar" id="sidebar-hr" style="display:none">
+    <h2>Hazard Ratio</h2>
+    <div class="hr-def" style="margin-bottom:12px"><strong>HR</strong> = Hazard Ratio — compares the <strong>velocity</strong> (instantaneous rate) of an event in treatment vs control over time. HR &lt; 1 = treatment slows events.</div>
+    <div class="collapsible open" id="s-hr">
+      <div class="collapsible-header" onclick="toggleSection('s-hr')">Controls<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="collapsible-body">
+        <div class="control-group"><label>Hazard Ratio <span class="value-display" id="hr-val">0.60</span></label><input type="range" id="hr-slider" min="10" max="200" value="60"><span class="unit-hint">treatment / control</span><span class="reset-hint">double-click to reset</span></div>
+        <div class="control-group"><label>Base Rate <span class="value-display" id="rate-val">0.30</span></label><input type="range" id="rate-slider" min="5" max="100" value="30"><span class="unit-hint">control events / time</span><span class="reset-hint">double-click to reset</span></div>
+        <div class="toggle-group"><div class="toggle-row"><span class="toggle-label">HR=1 reference</span><label class="toggle-switch"><input type="checkbox" id="toggle-hr-ref" checked><span class="toggle-slider"></span></label></div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Quiz sidebar -->
+  <aside class="sidebar q-sidebar" id="sidebar-quiz" style="display:none">
+    <div class="collapsible open" id="s-q-intro" style="margin-bottom:4px">
+      <div class="collapsible-header" onclick="toggleSection('s-q-intro')">
+        Drug Ad Questions <span class="q-progress" id="q-progress" style="margin-left:8px">Stat 0001</span>
+        <label class="mode-toggle-inline" onclick="event.stopPropagation()">
+          <input type="checkbox" id="mode-answer-toggle" onchange="setQMode(this.checked?'answer':'viz')">
+          <span class="toggle-slider-sm"></span>
+          <span style="font-size:.5625rem;color:#9ca3af;margin-left:4px">Answer</span>
+        </label>
+        <svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="collapsible-body">
+      </div>
+    </div>
+
+    <div class="collapsible open" id="s-q-body">
+      <div class="collapsible-header" onclick="toggleSection('s-q-body')">Question<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="collapsible-body">
+        <div style="font-size:.75rem;color:#374151;line-height:1.5;padding:10px 8px;background:#f3f4f6;border-radius:4px;border-left:2px solid #d1d5db;margin-bottom:8px" id="q-ad"></div>
+        <div style="font-size:.75rem;font-weight:600;color:#111;line-height:1.4;margin-bottom:8px" id="q-stem"></div>
+        <div id="q-options"></div>
+        <button class="show-trap-btn" id="show-trap-btn" onclick="toggleTrapCurve()">Compare: Option B (60% reduction) curve</button>
+      </div>
+    </div>
+
+    <div class="collapsible" id="s-q-sliders">
+      <div class="collapsible-header" onclick="toggleSection('s-q-sliders')">Manual Sliders<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="collapsible-body">
+        <div class="control-group"><label>Hazard Ratio <span class="value-display" id="qz-hr-val">0.60</span></label><input type="range" id="qz-hr-slider" min="10" max="200" value="60"><span class="reset-hint">double-click to reset</span></div>
+        <div class="control-group"><label>Base Rate <span class="value-display" id="qz-rate-val">0.30</span></label><input type="range" id="qz-rate-slider" min="5" max="100" value="30"><span class="reset-hint">double-click to reset</span></div>
+      </div>
+    </div>
+
+    <div class="collapsible" id="s-q-tools">
+      <div class="collapsible-header" onclick="toggleSection('s-q-tools')">Tools &amp; JSON<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="collapsible-body">
+        <div class="q-json-row">
+          <button onclick="exportQuestions()">Export JSON</button>
+          <button onclick="importQuestions()">Import JSON</button>
+          <button onclick="copyQuestionsJSON()">Copy</button>
+          <input type="file" id="json-import-file" accept=".json" style="display:none" onchange="handleImportFile(event)">
+        </div>
+        <div style="margin-top:8px">
+          <label style="font-size:.625rem;color:#6b7280;font-family:'Inter',sans-serif;display:block;margin-bottom:2px">Font size <span id="font-size-label">100%</span></label>
+          <input type="range" id="font-scale-slider" min="80" max="200" value="100" style="width:100%">
+          <span style="font-size:.5rem;color:#9ca3af">questions &amp; explanations</span>
+        </div>
+        <div style="margin-top:8px">
+          <input type="password" id="ds-api-key" placeholder="DeepSeek API key" style="width:100%;padding:4px 8px;font-family:'Inter',sans-serif;font-size:.625rem;border:1px solid #e5e7eb;border-radius:4px">
+          <span style="font-size:.5rem;color:#9ca3af">stored locally · <a href="#" onclick="document.getElementById('ds-api-key').value='';localStorage.removeItem('stats_viz_ds_key');return false" style="color:#9ca3af">clear</a></span>
+        </div>
+        <button class="reset-btn" onclick="resetQuestions()" style="margin-top:6px;width:100%">Reset Progress</button>
+      </div>
+    </div>
+
+    <div class="q-nav">
+      <button class="prev-btn" onclick="prevQuestion()" id="prev-btn">←</button>
+      <button class="next-btn" onclick="nextQuestion()" id="next-btn">Next →</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="chart-area">
+      <div class="chart-panel active" id="panel-arr"><canvas id="chart-arr"></canvas></div>
+      <div class="chart-panel" id="panel-hr"><canvas id="chart-hr"></canvas></div>
+      <div class="chart-panel" id="panel-quiz"><canvas id="chart-quiz"></canvas></div>
+
+      <!-- Floating cards -->
+      <div class="float-card" id="card-arr" style="top:16px;right:16px">
+        <div class="drag-handle">:: move ::</div>
+        <div class="card-body">
+        <div class="stats-row"><span class="key">SE</span><span class="val" id="cv-se">0.730</span></div>
+        <div class="stats-row"><span class="key">ARR%</span><span class="val" id="cv-arr">0.020</span></div>
+        <div class="stats-row"><span class="key">NNT</span><span class="val" id="cv-nnt">50.0</span></div>
+        <div class="stats-row"><span class="key">Z</span><span class="val" id="cv-z">2.74</span></div>
+        </div>
+        <div class="resize-handle"></div>
+      </div>
+
+      <div class="float-card" id="card-hr" style="top:16px;right:16px">
+        <div class="drag-handle">:: move ::</div>
+        <div class="card-body">
+        <div class="stats-row"><span class="key">HR</span><span class="val green" id="cv-hr">0.60</span></div>
+        <div class="stats-row"><span class="key">Control rate</span><span class="val red" id="cv-ctrl">30%</span></div>
+        <div class="stats-row"><span class="key">Treatment rate</span><span class="val" id="cv-treat">18%</span></div>
+        <div class="stats-row"><span class="key">Kept (HR)</span><span class="val red" id="cv-trap">60%</span></div>
+        <div class="stats-row"><span class="key">Trimmed</span><span class="val green" id="cv-red">40%</span></div>
+        </div>
+        <div class="resize-handle"></div>
+      </div>
+
+      <div class="float-card" id="card-quiz" style="top:16px;right:16px">
+        <div class="drag-handle">:: move ::</div>
+        <div class="card-tabs">
+          <button class="card-tab active" id="ctab-formula" onclick="switchCardTab('formula')">Formula</button>
+          <button class="card-tab" id="ctab-answer" onclick="switchCardTab('answer')">Answer</button>
+          <button class="card-tab" id="ctab-stats" onclick="switchCardTab('stats')">Stats</button>
+        </div>
+        <div class="card-body" id="cbody-formula">
+          <span class="empty">Click an option to see formula</span>
+        </div>
+        <div class="card-body" id="cbody-answer" style="display:none">
+          <span class="empty">Switch to Answer Mode to submit</span>
+        </div>
+        <div class="card-body" id="cbody-stats" style="display:none">
+          <div class="stats-row"><span class="key">HR</span><span class="val green" id="cvq-hr">0.60</span></div>
+          <div class="stats-row"><span class="key">Control rate</span><span class="val red" id="cvq-ctrl">30%</span></div>
+          <div class="stats-row"><span class="key">Treatment rate</span><span class="val" id="cvq-treat">18%</span></div>
+          <div class="stats-row"><span class="key">Kept (HR)</span><span class="val red" id="cvq-trap">60%</span></div>
+          <div class="stats-row"><span class="key">Trimmed</span><span class="val green" id="cvq-red">40%</span></div>
+        </div>
+        <div class="resize-handle"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  QUESTION BANK
+// ══════════════════════════════════════════════
+const QUESTION_BANK = [
+  { id:1, ad:"Take control of your fight against advanced lung cancer with OncoMab! In a landmark, randomized Phase III clinical trial, OncoMab delayed tumor growth significantly better than standard chemotherapy. The study reported a Hazard Ratio of 0.60 (95% CI: 0.48 - 0.82, p < 0.01) for Progression-Free Survival.",
+    stem:"Q1a. Which is the most accurate interpretation of the Hazard Ratio (0.60)?",
+    options:[
+      {label:"A",text:"At the end of the study, 40% of patients on OncoMab were completely free of tumors.",graph:{hr:0.60,brate:0.30},
+       desc:"A hazard ratio measures event velocity — the rate at which tumors progress per unit time. It has nothing to say about the final number of patients who end up tumor-free. That's an absolute endpoint, not a hazard. The 0.60 tells you treatment slowed the race, not who crossed the finish line."},
+      {label:"B",text:"Patients on OncoMab have a 60% lower risk of tumor progression at any given time point.",graph:{hr:0.40,brate:0.30},
+       desc:"The reduction comes from subtracting HR from 1.0 — not from reading 0.60 as '60%.' A hazard ratio is a multiplier: 0.60 means the treatment group experiences events at 60% of the control group's rate. The eliminated portion is 1.0 − 0.60 = 0.40, or 40%. For this option to be true, you need HR = 0.40. Look at the graph — the gap is twice as wide because you've eliminated 60% of the hazard velocity."},
+      {label:"C",text:"Patients on OncoMab have a 40% lower probability of tumor progression at any given time point.",graph:{hr:0.60,brate:0.30},
+       desc:"HR = 0.60 means treatment retains 60% of the control hazard velocity. The trimmed portion — the benefit — is 1.0 − 0.60 = 0.40. At every tick of the clock, patients on OncoMab face 40% less instantaneous risk. See the velocity bar: 60% kept, 40% eliminated."},
+      {label:"D",text:"Median survival time for OncoMab patients is 40% longer than standard chemotherapy.",graph:{hr:0.71,brate:0.30},
+       desc:"Median survival and hazard ratio are connected but not interchangeable. If median were truly 40% longer, HR would be ≈ 1/1.4 ≈ 0.71 — the graph shows curves pulled closer together. Same 40% number, completely different thing: time extension vs velocity reduction."},
+      {label:"E",text:"Patients on OncoMab are 0.60 times as likely to experience severe medication side effects.",graph:{hr:0.60,brate:0.30},
+       desc:"A hazard ratio is endpoint-specific. This trial's HR was calculated for Progression-Free Survival — the rate at which tumors grow. Side effects are a completely different endpoint with their own rates. Reusing the PFS hazard ratio for adverse events is like using a speedometer to measure fuel efficiency."}
+    ], correct:2, baseGraph:{hr:0.60,brate:0.30},
+    explanation:"A hazard ratio is a velocity. HR = 0.60 means the treatment group accumulates events at 60% of the speed of the control group. The 40% eliminated is 1.0 − 0.60. Every percentage point trimmed is less hazard velocity carried forward.",
+    trap:"The brain sees 0.60 and reaches for 60%. Don't. Subtract from 1.0. The hazard ratio is what you KEEP. The reduction is what you LOST." },
+  { id:2, ad:"New data shows CardioShield slashes heart attack risk! In a double-blind trial of 8,000 patients, the CardioShield group had 2.4% major cardiac events versus 3.0% in the placebo group (p = 0.03). The ad claims CardioShield 'reduces heart attack risk by 20%.'",
+    stem:"Q2a. What measure is the 20% figure, and what is the absolute benefit?",
+    options:[
+      {label:"A",text:"The advertisement reports the absolute risk reduction (ARR) of 0.6 percentage points correctly.",graph:{hr:0.80,brate:0.30},
+       desc:"ARR = 3.0% − 2.4% = 0.6 ppt. That's the absolute gap. But the ad says 20% — which is the relative calculation: (3.0% − 2.4%) / 3.0% = 0.6/3.0 = 20%. The ad reports RRR, not ARR. It exploits a perceptual hack: 20% sounds enormous, 0.6 ppt sounds trivial. Same trial."},
+      {label:"B",text:"The advertisement reports relative risk reduction (RRR) of 20%, but the ARR is only 0.6 ppt and NNT is approximately 167.",graph:{hr:0.80,brate:0.30},
+       desc:"RRR = (3.0% − 2.4%) / 3.0% = 20%. The absolute difference is 0.6 ppt — a sliver. NNT = 1/0.006 ≈ 167. You need to treat 167 people to prevent ONE cardiac event. The other 166 get the drug, pay the cost, bear side effects, and get zero benefit."},
+      {label:"C",text:"The hazard ratio of 0.80 means an 80% reduction in events.",graph:{hr:0.80,brate:0.30},
+       desc:"Same error as Q1 — the brain sees 0.80 and reaches for 80%. HR = 0.80 means treatment retains 80% of control hazard. Only 20% gets eliminated. 1.0 − 0.80 = 0.20. The velocity bar shows a sliver of red (20% trimmed) against a wall of blue (80% kept)."},
+      {label:"D",text:"The p-value of 0.03 confirms the 20% reduction is both statistically and clinically significant.",graph:{hr:0.80,brate:0.30},
+       desc:"The p-value answers one question: could this be chance? At p=0.03, probably not. But it says nothing about clinical importance. An ARR of 0.6 ppt may be statistically detectable but clinically meaningless. Statistical significance ≠ clinical significance."},
+      {label:"E",text:"The NNT is 20, meaning 20 patients need treatment to prevent one event.",graph:{hr:0.80,brate:0.30},
+       desc:"NNT = 1/0.006 ≈ 167, not 20. To get NNT=20 you'd need ARR=5 ppt — impossible given the baseline rate is only 3.0%. Always verify NNT against baseline."}
+    ], correct:1, baseGraph:{hr:0.80,brate:0.30},
+    explanation:"Relative risk is a ratio. Absolute risk is a subtraction. Ratios look bigger than subtractions when the baseline is small. That's the entire trick. The ad gives you the ratio (20%) and hopes you never ask about the subtraction (0.6 ppt).",
+    trap:"Whenever a drug ad gives a percentage, ask: 'Relative to what?' If they conceal the baseline rates, they're hiding the absolute benefit behind the relative framing." },
+  { id:3, ad:"BREAKING: VitaBoost shown to improve memory in aging adults! In a 12-week study of 120 participants, those taking VitaBoost scored 2.1 points higher on a cognitive assessment (95% CI: 0.1 – 4.1, p = 0.04) compared to placebo. The ad states: 'Clinically proven to boost brain function.'",
+    stem:"Q3a. Which concern about this claim is most justified?",
+    options:[
+      {label:"A",text:"The p-value of 0.04 definitively proves VitaBoost works, and the 2.1 point improvement is clinically meaningful.",graph:{hr:0.90,brate:0.25},
+       desc:"p=0.04 means '4% chance this is random noise.' It doesn't measure effect size. A 2.1 point gain might be a rounding error — or transformative. The p-value doesn't distinguish. HR=0.90 shows the effect is narrow: only 10% trimmed. That's a faint signal."},
+      {label:"B",text:"The sample size is too small to detect any effect, so the study should not have been published.",graph:{hr:0.90,brate:0.25},
+       desc:"N=120 can detect moderate effects just fine. The study DID detect an effect (p=0.04). The issue isn't detection — it's that the detected effect is tiny. Small samples detect big effects; big samples detect trivial ones. This is the latter."},
+      {label:"C",text:"The confidence interval (0.1 to 4.1) barely excludes zero, suggesting a marginal effect that may not be clinically meaningful.",graph:{hr:0.90,brate:0.25},
+       desc:"The 95% CI runs 0.1 to 4.1. The lower bound practically touches zero — meaning the true effect could be a fraction of a point. When the lower boundary of your confidence interval is a rounding error away from nothing, 'clinically proven' is reckless. The curves nearly overlap because HR=0.90 means 90% of the hazard remains."},
+      {label:"D",text:"Since this was only a 12-week study, results cannot be generalized to any population.",graph:{hr:0.90,brate:0.25},
+       desc:"Duration limits generalizability, but 'cannot be generalized to ANY population' is extreme. The deeper problem: even within the studied population, the effect might be trivial. Generalizability is secondary when the finding itself may not matter."},
+      {label:"E",text:"The cognitive assessment used the wrong scale; results should be in standard deviations.",graph:{hr:0.90,brate:0.25},
+       desc:"Standardized effect sizes have value, but raw scale points matter too — 2.1 points on a 30-point MMSE is different from 2.1 on a 300-point battery. The real problem isn't the measurement scale — it's that the CI barely excludes zero regardless of units."}
+    ], correct:2, baseGraph:{hr:0.90,brate:0.25},
+    explanation:"A CI that barely excludes zero is a warning. The true effect is somewhere between 'barely detectable' and 'moderate.' Statistical significance rules out chance — it doesn't rule out triviality. The CI width tells you about precision; the lower bound tells you the worst plausible scenario.",
+    trap:"A p-value whispers 'this probably isn't noise.' A CI shouts 'but it might also be nothing.' Listen to the CI." }
+];
+
+// ═══ STATE ═══
+const SK = 'stats_viz_questions';
+let qState = loadQS();
+let currentQ = 0, qAnswered = false, showTrap = false, qMode = 'viz';
+let qzHR = 0.60, qzBRate = 0.30, qzTreat = 0.18;
+let activeCardTab = 'formula';
+
+function loadQS() { try { const r = localStorage.getItem(SK); if (r) return JSON.parse(r); } catch(e){} return { answers:{}, score:0 }; }
+function saveQS() { localStorage.setItem(SK, JSON.stringify(qState)); updateScorePill(); }
+function resetQuestions() { if (!confirm('Reset all progress?')) return; qState = { answers:{}, score:0 }; saveQS(); renderQuestion(); }
+function updateScorePill() {
+  const a = Object.values(qState.answers).filter(v=>v!==undefined).length;
+  const c = Object.values(qState.answers).filter(v=>v===true).length;
+  document.getElementById('score-correct').innerText = c;
+  document.getElementById('score-total').innerText = a;
+  document.getElementById('score-pill').classList.toggle('show', a>0);
+}
+
+function setQMode(mode) {
+  qMode = mode;
+  document.getElementById('mode-answer-toggle').checked = (mode==='answer');
+  if (mode==='answer' && qAnswered) { renderQuestion(); return; }
+  if (!qAnswered) {
+    const q = QUESTION_BANK[currentQ];
+    applyGraphPreset(q.baseGraph.hr, q.baseGraph.brate);
+    updateSlidersFromState();
+    document.getElementById('cbody-formula').innerHTML = '<span class="empty">Click an option to see formula</span>';
+  }
+}
+
+function switchCardTab(tab) {
+  activeCardTab = tab;
+  ['formula','answer','stats'].forEach(t => {
+    document.getElementById('ctab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('cbody-'+t).style.display = t===tab ? '' : 'none';
+  });
+}
+
+function renderQuestion() {
+  const q = QUESTION_BANK[currentQ];
+  qAnswered = qState.answers[q.id] !== undefined;
+  document.getElementById('q-progress').innerText = 'Stat '+String(q.id).padStart(4,'0');
+  document.getElementById('q-ad').innerText = q.ad;
+  document.getElementById('q-stem').innerText = 'Stat '+String(q.id).padStart(4,'0')+' — '+q.stem;
+
+  const optsDiv = document.getElementById('q-options'); optsDiv.innerHTML = '';
+  const inAM = (qMode === 'answer');
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'q-option';
+    if (qAnswered && inAM) btn.classList.add('locked');
+    if (qAnswered && inAM && i === q.correct) btn.classList.add('correct-flash');
+    if (qAnswered && inAM && qState.answers[q.id] === false && i === qState.picked) btn.classList.add('wrong-flash');
+    if (qAnswered && inAM && qState.answers[q.id] === true && i === qState.picked) btn.classList.add('correct-flash');
+    btn.innerHTML = '<strong>'+opt.label+')</strong> '+opt.text;
+    btn.onclick = () => pickAnswer(i);
+    optsDiv.appendChild(btn);
+  });
+
+  // Card tabs
+  document.getElementById('cbody-formula').innerHTML = '<span class="empty">Click an option to see formula</span>';
+  if (qAnswered && inAM) {
+    const corr = q.options[q.correct].label;
+    document.getElementById('cbody-answer').innerHTML =
+      '<div class="answer-'+(qState.answers[q.id]?'correct':'wrong')+'"><strong>You picked: '+q.options[qState.picked].label+'</strong><br><strong>Correct: '+corr+'</strong><br><br>'+q.explanation+'<div class="trap-note">'+q.trap+'</div></div>';
+  } else {
+    document.getElementById('cbody-answer').innerHTML = '<span class="empty">Switch to Answer Mode to submit</span>';
+  }
+  switchCardTab(qAnswered ? 'answer' : 'formula');
+
+  document.getElementById('show-trap-btn').style.display = (currentQ===0) ? '' : 'none';
+  document.getElementById('prev-btn').style.visibility = currentQ===0 ? 'hidden' : '';
+  document.getElementById('next-btn').style.visibility = currentQ===QUESTION_BANK.length-1 ? 'hidden' : '';
+  updateScorePill();
+
+  applyGraphPreset(q.baseGraph.hr, q.baseGraph.brate);
+  updateSlidersFromState();
+  updateQuizGraph(); updateQuizCard();
+}
+
+function updateSlidersFromState() {
+  document.getElementById('qz-hr-slider').value = Math.round(qzHR*100);
+  document.getElementById('qz-rate-slider').value = Math.round(qzBRate*100);
+  document.getElementById('qz-hr-val').innerText = qzHR.toFixed(2);
+  document.getElementById('qz-rate-val').innerText = qzBRate.toFixed(2);
+}
+
+function pickAnswer(i) {
+  if (qAnswered && qMode==='answer') return;
+  const q = QUESTION_BANK[currentQ];
+  const opt = q.options[i];
+
+  if (opt.graph) {
+    applyGraphPreset(opt.graph.hr, opt.graph.brate);
+    updateSlidersFromState();
+    updateQuizGraph(); updateQuizCard();
+    document.getElementById('cbody-formula').innerHTML =
+      '<span class="math-line">HR='+opt.graph.hr.toFixed(2)+' → 1.0 − '+opt.graph.hr.toFixed(2)+' = '+(1-opt.graph.hr).toFixed(2)+' = '+((1-opt.graph.hr)*100).toFixed(0)+'% trimmed</span><span class="body-text">'+opt.desc+'</span><button class="ask-ai-btn" onclick="askDeepSeek('+currentQ+','+i+')">Ask AI &mdash; explain this option</button>';
+    switchCardTab('formula');
+  }
+
+  if (qMode==='viz') return;
+
+  if (qAnswered) return;
+  qState.answers[q.id] = (i===q.correct);
+  qState.picked = i;
+  qAnswered = true;
+  saveQS();
+  renderQuestion();
+  switchCardTab('answer');
+}
+
+function applyGraphPreset(hr, br) { qzHR=hr; qzBRate=br; qzTreat=hr*br; }
+
+function nextQuestion() { if (currentQ<QUESTION_BANK.length-1){currentQ++;qAnswered=false;showTrap=false;renderQuestion()} }
+function prevQuestion() { if (currentQ>0){currentQ--;qAnswered=false;showTrap=false;renderQuestion()} }
+function toggleTrapCurve(){showTrap=!showTrap;document.getElementById('show-trap-btn').innerText=showTrap?'Hide trap curve':'Compare: Option B (60% reduction) curve';updateQuizGraph()}
+
+function updateQuizGraph(){
+  const xv=[],cy=[],ty=[],hy=[],trapY=[];
+  for(let t=0;t<=6;t+=.05){xv.push(t);cy.push(1-Math.exp(-qzBRate*t*2.5));ty.push(1-Math.exp(-qzTreat*t*2.5));hy.push(1-Math.exp(-qzBRate*t*2.5));trapY.push(1-Math.exp(-qzBRate*0.40*t*2.5))}
+  chartQuiz.data.labels=xv;chartQuiz.data.datasets[0].data=cy;chartQuiz.data.datasets[1].data=ty;chartQuiz.data.datasets[2].data=hy;chartQuiz.data.datasets[3].data=trapY;
+  chartQuiz.setDatasetVisibility(3,showTrap);chartQuiz.update();
+}
+function updateQuizCard(){
+  const hr=qzHR,br=qzBRate,tr=hr*br,pc=(1-hr)*100;
+  ['cvq-hr','qz-hr-val'].forEach(id=>{const e=document.getElementById(id);if(e){e.innerText=hr.toFixed(2);e.className='val '+(hr<1?'green':'red')}});
+  document.getElementById('cvq-ctrl').innerText=(br*100).toFixed(0)+'%';
+  document.getElementById('cvq-treat').innerText=(tr*100).toFixed(0)+'%';
+  document.getElementById('cvq-trap').innerText=(hr*100).toFixed(0)+'%';
+  document.getElementById('cvq-red').innerHTML=pc.toFixed(0)+'% <span style="font-size:.5rem;color:#d1d5db;font-weight:400">(1.0−'+hr.toFixed(2)+'='+(1-hr).toFixed(2)+')</span>';
+  document.getElementById('qz-rate-val').innerText=br.toFixed(2);
+}
+
+// ═══ Chart plugins ═══
+const qzDimPlugin={id:'qzDim',afterDraw(chart){if(activeTab!=='quiz')return;const{ctx,chartArea:{top,bottom,left,right},scales:{x,y}}=chart;const td=2.5,xd=x.getPixelForValue(td);const yc=y.getPixelForValue(1-Math.exp(-qzBRate*td*2.5));const yt=y.getPixelForValue(1-Math.exp(-qzTreat*td*2.5));const hr=qzHR,kept=hr*100,trimmed=(1-hr)*100;ctx.save();ctx.strokeStyle='rgba(0,0,0,.1)';ctx.lineWidth=1;ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(xd,top);ctx.lineTo(xd,bottom);ctx.stroke();ctx.setLineDash([]);[{yy:yc,c:'#ef4444',l:'Control '+(qzBRate*100).toFixed(0)+'%'},{yy:yt,c:'#2563eb',l:'Treatment '+(qzTreat*100).toFixed(0)+'%'}].forEach(p=>{ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(xd,p.yy,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#374151';ctx.font='600 11px Inter,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(p.l,xd+12,p.yy)});const bx=xd+100;ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=2;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(bx,yc);ctx.lineTo(bx,yt);ctx.stroke();[yc,yt].forEach(yy=>{ctx.beginPath();ctx.moveTo(bx-8,yy);ctx.lineTo(bx+8,yy);ctx.stroke()});ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.moveTo(bx,yt);ctx.lineTo(bx-5,yt+10);ctx.lineTo(bx+5,yt+10);ctx.fill();ctx.beginPath();ctx.moveTo(bx,yc);ctx.lineTo(bx-5,yc-10);ctx.lineTo(bx+5,yc-10);ctx.fill();const gm=(yc+yt)/2;ctx.fillStyle='#1a1a2e';ctx.font='700 13px Inter,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('↓ '+trimmed.toFixed(0)+'%',bx+16,gm-8);ctx.fillStyle='#6b7280';ctx.font='400 10px Inter,sans-serif';ctx.fillText('reduction in hazard',bx+16,gm+8);const barX=right-350,barY=bottom-50,barW=320,barH=22,barR=4,keptW=(kept/100)*barW,trimW=(trimmed/100)*barW;ctx.fillStyle='#6b7280';ctx.font='500 10px Inter,sans-serif';ctx.textAlign='left';ctx.fillText('Hazard Velocity:',barX,barY-6);ctx.fillStyle='rgba(0,0,0,.04)';ctx.strokeStyle='rgba(0,0,0,.1)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(barX,barY,barW,barH,barR);ctx.fill();ctx.stroke();if(keptW>0){ctx.fillStyle='#93c5fd';ctx.beginPath();ctx.roundRect(barX,barY,keptW,barH,{tl:barR,tr:0,bl:barR,br:0});ctx.fill();ctx.fillStyle='#1e40af';ctx.font='700 10px Inter,sans-serif';ctx.textAlign='center';ctx.fillText('Kept: '+kept.toFixed(0)+'%',barX+keptW/2,barY+barH/2+1)}if(trimW>0){ctx.fillStyle='#fca5a5';ctx.beginPath();ctx.roundRect(barX+keptW,barY,trimW,barH,{tl:0,tr:barR,bl:0,br:barR});ctx.fill();ctx.fillStyle='#991b1b';ctx.font='700 10px Inter,sans-serif';ctx.textAlign='center';ctx.fillText('Trimmed: '+trimmed.toFixed(0)+'%',barX+keptW+trimW/2,barY+barH/2+1)}ctx.fillStyle='#374151';ctx.font='600 11px Inter,sans-serif';ctx.textAlign='left';ctx.fillText('= benefit (1−HR)',barX+barW+12,barY+barH/2+1);ctx.restore()}};
+Chart.register(qzDimPlugin);
+const chartQuiz=new Chart(document.getElementById('chart-quiz'),{type:'line',data:{labels:[],datasets:[{label:'Control',data:[],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.06)',borderWidth:2,fill:true,pointRadius:0,tension:.15,order:1},{label:'Treatment',data:[],borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.06)',borderWidth:2,fill:true,pointRadius:0,tension:.15,order:1},{label:'HR=1',data:[],borderColor:'rgba(0,0,0,.12)',borderWidth:1.5,borderDash:[4,6],pointRadius:0,fill:false,order:0},{label:'Trap: HR=0.40 (60% reduction)',data:[],borderColor:'#f87171',backgroundColor:'rgba(248,113,113,.06)',borderWidth:2,borderDash:[3,5],fill:true,pointRadius:0,tension:.15,order:0,hidden:true}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'top',labels:{font:{family:'Inter',size:12,weight:'500'},color:'#6b7280',usePointStyle:true,pointStyleWidth:8,padding:16}}},scales:{x:{type:'linear',min:0,max:6,title:{display:true,text:'Time (months)',font:{family:'Inter',size:12},color:'#6b7280'},ticks:{font:{family:'Inter',size:11},color:'#9ca3af',stepSize:1},grid:{color:'rgba(0,0,0,.04)'}},y:{min:0,max:1,title:{display:true,text:'Cumulative Events',font:{family:'Inter',size:12},color:'#6b7280'},ticks:{font:{family:'Inter',size:11},color:'#9ca3af',stepSize:.2,callback:v=>(v*100).toFixed(0)+'%'},grid:{color:'rgba(0,0,0,.04)'}}},interaction:{mode:'index',intersect:false}}});
+
+// Quiz slider events
+document.getElementById('qz-hr-slider').oninput=function(){qzHR=parseFloat(this.value)/100;qzTreat=qzHR*qzBRate;updateQuizGraph();updateQuizCard();document.getElementById('cbody-formula').innerHTML='<span class="empty">Manual override — click an option to restore</span>'};
+document.getElementById('qz-rate-slider').oninput=function(){qzBRate=parseFloat(this.value)/100;qzTreat=qzHR*qzBRate;updateQuizGraph();updateQuizCard();document.getElementById('cbody-formula').innerHTML='<span class="empty">Manual override — click an option to restore</span>'};
+document.getElementById('qz-hr-slider').ondblclick=function(){this.value=60;qzHR=0.60;qzTreat=qzHR*qzBRate;updateQuizGraph();updateQuizCard()};
+document.getElementById('qz-rate-slider').ondblclick=function(){this.value=30;qzBRate=0.30;qzTreat=qzHR*qzBRate;updateQuizGraph();updateQuizCard()};
+
+// ═══ TABS ═══
+let activeTab='arr';
+function switchTab(t){
+  activeTab=t;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-bar .tab-btn').forEach(b=>{if(b.textContent.toLowerCase().includes(t==='quiz'?'questions':t==='arr'?'two':'hazard'))b.classList.add('active')});
+  document.querySelectorAll('.chart-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+(t==='quiz'?'quiz':t==='arr'?'arr':'hr')).classList.add('active');
+  document.getElementById('sidebar-arr').style.display=t==='arr'?'':'none';
+  document.getElementById('sidebar-hr').style.display=t==='hr'?'':'none';
+  document.getElementById('sidebar-quiz').style.display=t==='quiz'?'':'none';
+  document.getElementById('card-arr').classList.toggle('card-hidden',t!=='arr');
+  document.getElementById('card-hr').classList.toggle('card-hidden',t!=='hr');
+  document.getElementById('card-quiz').classList.toggle('card-hidden',t!=='quiz');
+  if(t==='arr'){updateARR();updateARRCard()}
+  if(t==='hr'){updateHR();updateHRCard()}
+  if(t==='quiz'){renderQuestion();updateScorePill()}
+}
+function toggleSection(id){document.getElementById(id).classList.toggle('open')}
+function normalPDF(x,m,s){const v=s*s;return Math.exp(-.5*(x-m)*(x-m)/v)/Math.sqrt(2*Math.PI*v)}
+
+// ── Draggable + resizable cards with JSON persistence + shared sizing ──
+const CARD_STORAGE_KEY = 'stats_viz_card_positions';
+const SHARED_SIZE_KEY = 'stats_viz_shared_card_size';
+let cardPositions = {};
+
+// Shared sizing across all three cards — resize one, all follow
+let sharedCardW = 280, sharedCardH = null;
+try {
+  const saved = localStorage.getItem(SHARED_SIZE_KEY);
+  if (saved) { const sz = JSON.parse(saved); sharedCardW = sz.w || 280; sharedCardH = sz.h || null; }
+  const pos = localStorage.getItem(CARD_STORAGE_KEY);
+  if (pos) cardPositions = JSON.parse(pos);
+} catch(e) {}
+
+function saveCardPositions() {
+  localStorage.setItem(CARD_STORAGE_KEY, JSON.stringify(cardPositions));
+}
+function saveSharedSize() {
+  localStorage.setItem(SHARED_SIZE_KEY, JSON.stringify({ w: sharedCardW, h: sharedCardH }));
+}
+
+// Auto-save timer: saves positions + shared size after 30s of inactivity
+let autoSaveTimer = 0;
+function resetAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    // snapshot current positions of all cards
+    document.querySelectorAll('.float-card').forEach(c => {
+      cardPositions[c.id] = {
+        top: parseInt(c.style.top) || 16,
+        left: parseInt(c.style.left) || undefined,
+        right: c.style.right !== 'auto' ? parseInt(c.style.right) : undefined
+      };
+      if (!cardPositions[c.id].left && !cardPositions[c.id].right) {
+        cardPositions[c.id].right = 16;
+      }
+    });
+    saveCardPositions();
+    saveSharedSize();
+  }, 30000);
+}
+// Hook auto-save into all user interactions
+['mousemove','touchmove','mouseup','touchend','click','input','change'].forEach(evt => {
+  window.addEventListener(evt, resetAutoSave, { passive: true });
+});
+
+// Apply shared sizing to all three cards
+function applySharedSize(excludeCard) {
+  document.querySelectorAll('.float-card').forEach(c => {
+    if (c === excludeCard) return;
+    c.style.width = sharedCardW + 'px';
+    if (sharedCardH) c.style.height = sharedCardH + 'px';
+    else c.style.height = 'auto';
+  });
+}
+
+document.querySelectorAll('.float-card').forEach(card => {
+  const id = card.id;
+  // Restore per-card position (independent — each can sit in its own spot)
+  if (cardPositions[id]) {
+    const p = cardPositions[id];
+    if (p.top !== undefined) card.style.top = p.top + 'px';
+    if (p.right !== undefined) { card.style.right = p.right + 'px'; card.style.left = 'auto'; }
+    if (p.left !== undefined) { card.style.left = p.left + 'px'; card.style.right = 'auto'; }
+  }
+  // Apply shared sizing
+  card.style.width = sharedCardW + 'px';
+  if (sharedCardH) card.style.height = sharedCardH + 'px';
+
+  // Only drag from the :: move :: handle
+  const handle = card.querySelector('.drag-handle');
+  let ox = 0, oy = 0, dragging = false;
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    const r = card.getBoundingClientRect();
+    ox = e.clientX - r.left;
+    oy = e.clientY - r.top;
+    card.style.cursor = 'grabbing';
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  handle.addEventListener('touchstart', e => {
+    dragging = true;
+    const r = card.getBoundingClientRect();
+    ox = e.touches[0].clientX - r.left;
+    oy = e.touches[0].clientY - r.top;
+    card.style.cursor = 'grabbing';
+    e.preventDefault();
+    e.stopPropagation();
+  }, { passive: false });
+
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const parent = card.parentElement.getBoundingClientRect();
+    card.style.left = (e.clientX - parent.left - ox) + 'px';
+    card.style.top = (e.clientY - parent.top - oy) + 'px';
+    card.style.right = 'auto';
+  });
+  window.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const parent = card.parentElement.getBoundingClientRect();
+    card.style.left = (e.touches[0].clientX - parent.left - ox) + 'px';
+    card.style.top = (e.touches[0].clientY - parent.top - oy) + 'px';
+    card.style.right = 'auto';
+  }, { passive: false });
+
+  window.addEventListener('mouseup', () => {
+    if (dragging) {
+      dragging = false;
+      card.style.cursor = '';
+      cardPositions[id] = {
+        top: parseInt(card.style.top),
+        left: parseInt(card.style.left)
+      };
+      saveCardPositions();
+      resetAutoSave();
+    }
+  });
+  window.addEventListener('touchend', () => {
+    if (dragging) {
+      dragging = false;
+      card.style.cursor = '';
+      cardPositions[id] = {
+        top: parseInt(card.style.top),
+        left: parseInt(card.style.left)
+      };
+      saveCardPositions();
+      resetAutoSave();
+    }
+  });
+});
+
+// ── Resize handles — shared sizing across all three cards ──
+document.querySelectorAll('.float-card .resize-handle').forEach(handle => {
+  let rs = false, sx = 0, sy = 0;
+  const card = handle.parentElement;
+  handle.addEventListener('mousedown', e => {
+    rs = true; sx = e.clientX; sy = e.clientY;
+    e.preventDefault(); e.stopPropagation();
+  });
+  handle.addEventListener('touchstart', e => {
+    rs = true; sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    e.preventDefault(); e.stopPropagation();
+  }, { passive: false });
+  window.addEventListener('mousemove', e => {
+    if (!rs) return;
+    const w = Math.max(180, sharedCardW + (e.clientX - sx));
+    const h = Math.max(80, (sharedCardH || card.offsetHeight) + (e.clientY - sy));
+    // Apply to all three cards
+    document.querySelectorAll('.float-card').forEach(c => {
+      c.style.width = w + 'px';
+      c.style.height = h + 'px';
+    });
+  });
+  window.addEventListener('touchmove', e => {
+    if (!rs) return;
+    const w = Math.max(180, sharedCardW + (e.touches[0].clientX - sx));
+    const h = Math.max(80, (sharedCardH || card.offsetHeight) + (e.touches[0].clientY - sy));
+    document.querySelectorAll('.float-card').forEach(c => {
+      c.style.width = w + 'px';
+      c.style.height = h + 'px';
+    });
+  }, { passive: false });
+  window.addEventListener('mouseup', () => {
+    if (rs) {
+      rs = false;
+      const w = parseInt(card.style.width);
+      const h = parseInt(card.style.height);
+      sharedCardW = isNaN(w) ? sharedCardW : w;
+      sharedCardH = isNaN(h) ? sharedCardH : h;
+      saveSharedSize();
+      resetAutoSave();
+    }
+  });
+  window.addEventListener('touchend', () => {
+    if (rs) {
+      rs = false;
+      const w = parseInt(card.style.width);
+      const h = parseInt(card.style.height);
+      sharedCardW = isNaN(w) ? sharedCardW : w;
+      sharedCardH = isNaN(h) ? sharedCardH : h;
+      saveSharedSize();
+      resetAutoSave();
+    }
+  });
+});
+
+// ═══ ARR ═══
+let showArrOverlay=true,arrSE=0.73,arrDiff=2.0;
+const arrDimPlugin={id:'arrDim',afterDraw(chart){if(activeTab!=='arr'||!showArrOverlay||arrDiff<=0)return;const{ctx,chartArea:{top,bottom},scales:{x}}=chart;const xs=x.getPixelForValue(0),xe=x.getPixelForValue(arrDiff),dy=top+(bottom-top)*.22;ctx.save();ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(xs,dy);ctx.lineTo(xe,dy);ctx.stroke();ctx.setLineDash([]);ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1.5;[xs,xe].forEach(xx=>{ctx.beginPath();ctx.moveTo(xx,dy-8);ctx.lineTo(xx,dy+8);ctx.stroke()});const a=5;ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.moveTo(xs,dy);ctx.lineTo(xs+a,dy-a);ctx.lineTo(xs+a,dy+a);ctx.fill();ctx.beginPath();ctx.moveTo(xe,dy);ctx.lineTo(xe-a,dy-a);ctx.lineTo(xe-a,dy+a);ctx.fill();ctx.fillStyle='#1a1a2e';ctx.font='700 15px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText('ARR = '+arrDiff.toFixed(1)+' ppt',(xs+xe)/2,dy-12);ctx.restore()}};
+Chart.register(arrDimPlugin);
+const chartARR=new Chart(document.getElementById('chart-arr'),{type:'line',data:{labels:[],datasets:[{label:'Placebo',data:[],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.08)',borderWidth:2,fill:true,pointRadius:0,tension:.1,order:1},{label:'Treatment',data:[],borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',borderWidth:2,fill:true,pointRadius:0,tension:.1,order:1},{label:'μ₀',data:[],borderColor:'rgba(239,68,68,.5)',borderWidth:1.5,borderDash:[4,6],pointRadius:0,fill:false,order:0},{label:'μ₁',data:[],borderColor:'rgba(37,99,235,.5)',borderWidth:1.5,borderDash:[4,6],pointRadius:0,fill:false,order:0}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'top',labels:{font:{family:'Inter',size:12,weight:'500'},color:'#6b7280',usePointStyle:true,pointStyleWidth:8,padding:16,filter:i=>i.datasetIndex<2}}},scales:{x:{type:'linear',min:-4,max:8,title:{display:true,text:'Effect Measurement',font:{family:'Inter',size:12},color:'#6b7280'},ticks:{font:{family:'Inter',size:11},color:'#9ca3af'},grid:{color:'rgba(0,0,0,.04)'}},y:{display:false,min:0,grid:{color:'rgba(0,0,0,.03)'}}},interaction:{mode:'index',intersect:false}}});
+function updateARR(){const rn=parseFloat(document.getElementById('n-slider').value);const d=parseFloat(document.getElementById('diff-slider').value);const n=Math.floor(Math.pow(rn/1000,3)*99998)+2;const se=4/Math.sqrt(n);arrSE=se;arrDiff=d;document.getElementById('n-val').innerText=n.toLocaleString();document.getElementById('diff-val').innerText=d.toFixed(1);updateARRCard();const xv=[],ny=[],ay=[];for(let x=-4;x<=8;x+=.05){xv.push(x);ny.push(normalPDF(x,0,se));ay.push(normalPDF(x,d,se))}const mh=Math.max(...ny,...ay)*1.05;chartARR.data.labels=xv;chartARR.data.datasets[0].data=ny;chartARR.data.datasets[1].data=ay;chartARR.data.datasets[2].data=[{x:0,y:0},{x:0,y:mh}];chartARR.data.datasets[3].data=[{x:d,y:0},{x:d,y:mh}];chartARR.options.scales.y.max=mh*1.15;chartARR.update()}
+function updateARRCard(){document.getElementById('cv-se').innerText=arrSE.toFixed(3);document.getElementById('cv-arr').innerText=(arrDiff/100).toFixed(3);document.getElementById('cv-nnt').innerText=arrDiff>0?(100/arrDiff).toFixed(1):'∞';document.getElementById('cv-z').innerText=(arrDiff/arrSE).toFixed(2)}
+
+// ═══ HR ═══
+let hrV=0.6,ctrlR=0.3,treatR=0.18;
+const hrDimPlugin={id:'hrDim',afterDraw(chart){if(activeTab!=='hr')return;const{ctx,chartArea:{top,bottom,left,right},scales:{x,y}}=chart;const td=2.5,xd=x.getPixelForValue(td);const yc=y.getPixelForValue(1-Math.exp(-ctrlR*td*2.5));const yt=y.getPixelForValue(1-Math.exp(-treatR*td*2.5));const hr=hrV,kept=hr*100,trimmed=(1-hr)*100;ctx.save();ctx.strokeStyle='rgba(0,0,0,.1)';ctx.lineWidth=1;ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(xd,top);ctx.lineTo(xd,bottom);ctx.stroke();ctx.setLineDash([]);[{yy:yc,c:'#ef4444',l:'Control '+(ctrlR*100).toFixed(0)+'%'},{yy:yt,c:'#2563eb',l:'Treatment '+(treatR*100).toFixed(0)+'%'}].forEach(p=>{ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(xd,p.yy,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#374151';ctx.font='600 11px Inter,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(p.l,xd+12,p.yy)});const bx=xd+100;ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=2;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(bx,yc);ctx.lineTo(bx,yt);ctx.stroke();[yc,yt].forEach(yy=>{ctx.beginPath();ctx.moveTo(bx-8,yy);ctx.lineTo(bx+8,yy);ctx.stroke()});ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.moveTo(bx,yt);ctx.lineTo(bx-5,yt+10);ctx.lineTo(bx+5,yt+10);ctx.fill();ctx.beginPath();ctx.moveTo(bx,yc);ctx.lineTo(bx-5,yc-10);ctx.lineTo(bx+5,yc-10);ctx.fill();const gm=(yc+yt)/2;ctx.fillStyle='#1a1a2e';ctx.font='700 13px Inter,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('↓ '+trimmed.toFixed(0)+'%',bx+16,gm-8);ctx.fillStyle='#6b7280';ctx.font='400 10px Inter,sans-serif';ctx.fillText('reduction in hazard',bx+16,gm+8);const barX=right-350,barY=bottom-50,barW=320,barH=22,barR=4,keptW=(kept/100)*barW,trimW=(trimmed/100)*barW;ctx.fillStyle='#6b7280';ctx.font='500 10px Inter,sans-serif';ctx.textAlign='left';ctx.fillText('Hazard Velocity:',barX,barY-6);ctx.fillStyle='rgba(0,0,0,.04)';ctx.strokeStyle='rgba(0,0,0,.1)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(barX,barY,barW,barH,barR);ctx.fill();ctx.stroke();if(keptW>0){ctx.fillStyle='#93c5fd';ctx.beginPath();ctx.roundRect(barX,barY,keptW,barH,{tl:barR,tr:0,bl:barR,br:0});ctx.fill();ctx.fillStyle='#1e40af';ctx.font='700 10px Inter,sans-serif';ctx.textAlign='center';ctx.fillText('Kept: '+kept.toFixed(0)+'%',barX+keptW/2,barY+barH/2+1)}if(trimW>0){ctx.fillStyle='#fca5a5';ctx.beginPath();ctx.roundRect(barX+keptW,barY,trimW,barH,{tl:0,tr:barR,bl:0,br:barR});ctx.fill();ctx.fillStyle='#991b1b';ctx.font='700 10px Inter,sans-serif';ctx.textAlign='center';ctx.fillText('Trimmed: '+trimmed.toFixed(0)+'%',barX+keptW+trimW/2,barY+barH/2+1)}ctx.fillStyle='#374151';ctx.font='600 11px Inter,sans-serif';ctx.textAlign='left';ctx.fillText('= benefit (1−HR)',barX+barW+12,barY+barH/2+1);ctx.restore()}};
+Chart.register(hrDimPlugin);
+const chartHR=new Chart(document.getElementById('chart-hr'),{type:'line',data:{labels:[],datasets:[{label:'Control',data:[],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.06)',borderWidth:2,fill:true,pointRadius:0,tension:.15,order:1},{label:'Treatment',data:[],borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.06)',borderWidth:2,fill:true,pointRadius:0,tension:.15,order:1},{label:'HR=1',data:[],borderColor:'rgba(0,0,0,.12)',borderWidth:1.5,borderDash:[4,6],pointRadius:0,fill:false,order:0}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'top',labels:{font:{family:'Inter',size:12,weight:'500'},color:'#6b7280',usePointStyle:true,pointStyleWidth:8,padding:16,filter:i=>i.datasetIndex<2}}},scales:{x:{type:'linear',min:0,max:6,title:{display:true,text:'Time (months)',font:{family:'Inter',size:12},color:'#6b7280'},ticks:{font:{family:'Inter',size:11},color:'#9ca3af',stepSize:1},grid:{color:'rgba(0,0,0,.04)'}},y:{min:0,max:1,title:{display:true,text:'Cumulative Events',font:{family:'Inter',size:12},color:'#6b7280'},ticks:{font:{family:'Inter',size:11},color:'#9ca3af',stepSize:.2,callback:v=>(v*100).toFixed(0)+'%'},grid:{color:'rgba(0,0,0,.04)'}}},interaction:{mode:'index',intersect:false}}});
+function updateHR(){hrV=parseFloat(document.getElementById('hr-slider').value)/100;ctrlR=parseFloat(document.getElementById('rate-slider').value)/100;treatR=ctrlR*hrV;document.getElementById('hr-val').innerText=hrV.toFixed(2);document.getElementById('rate-val').innerText=ctrlR.toFixed(2);updateHRCard();const xv=[],cy=[],ty=[],hy=[];for(let t=0;t<=6;t+=.05){xv.push(t);cy.push(1-Math.exp(-ctrlR*t*2.5));ty.push(1-Math.exp(-treatR*t*2.5));hy.push(1-Math.exp(-ctrlR*t*2.5))}chartHR.data.labels=xv;chartHR.data.datasets[0].data=cy;chartHR.data.datasets[1].data=ty;chartHR.data.datasets[2].data=hy;chartHR.update()}
+function updateHRCard(){const pc=(1-hrV)*100;document.getElementById('cv-hr').innerText=hrV.toFixed(2);document.getElementById('cv-hr').className='val '+(hrV<1?'green':'red');document.getElementById('cv-ctrl').innerText=(ctrlR*100).toFixed(0)+'%';document.getElementById('cv-treat').innerText=(treatR*100).toFixed(0)+'%';document.getElementById('cv-red').innerHTML=pc.toFixed(0)+'% <span style="font-size:.5rem;color:#d1d5db;font-weight:400">(1.0−'+hrV.toFixed(2)+')</span>';document.getElementById('cv-trap').innerText=(hrV*100).toFixed(0)+'%'}
+
+// ── JSON export/import ──
+function exportQuestions(){const b=new Blob([JSON.stringify(QUESTION_BANK,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='stats_questions.json';a.click();URL.revokeObjectURL(u)}
+function copyQuestionsJSON(){navigator.clipboard.writeText(JSON.stringify(QUESTION_BANK,null,2)).then(()=>{const b=event.target;const o=b.innerText;b.innerText='Copied!';setTimeout(()=>b.innerText=o,1200)})}
+function importQuestions(){document.getElementById('json-import-file').click()}
+function handleImportFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(ev){try{const d=JSON.parse(ev.target.result);if(!Array.isArray(d))throw new Error('Not an array');d.forEach((q,i)=>{if(!q.id||!q.stem||!Array.isArray(q.options)||q.options.length!==5)throw new Error('Q'+(i+1)+' invalid')});QUESTION_BANK.length=0;d.forEach(q=>QUESTION_BANK.push(q));qState={answers:{},score:0};currentQ=0;qAnswered=false;saveQS();renderQuestion();alert('Imported '+d.length+' questions.')}catch(err){alert('Invalid: '+err.message)}};r.readAsText(f);e.target.value=''}
+
+// Events
+document.getElementById('n-slider').oninput=updateARR;document.getElementById('diff-slider').oninput=updateARR;
+document.getElementById('n-slider').ondblclick=function(){this.value=65;updateARR()};document.getElementById('diff-slider').ondblclick=function(){this.value=2;updateARR()};
+document.getElementById('toggle-means').onchange=function(){chartARR.setDatasetVisibility(2,this.checked);chartARR.setDatasetVisibility(3,this.checked);chartARR.update()};
+document.getElementById('toggle-arr').onchange=function(){showArrOverlay=this.checked;chartARR.update()};
+document.getElementById('hr-slider').oninput=updateHR;document.getElementById('rate-slider').oninput=updateHR;
+document.getElementById('hr-slider').ondblclick=function(){this.value=60;updateHR()};document.getElementById('rate-slider').ondblclick=function(){this.value=30;updateHR()};
+document.getElementById('toggle-hr-ref').onchange=function(){chartHR.setDatasetVisibility(2,this.checked);chartHR.update()};
+
+// Init
+document.getElementById('card-hr').classList.add('card-hidden');
+document.getElementById('card-quiz').classList.add('card-hidden');
+updateARR();updateARRCard();updateHR();updateHRCard();updateQuizGraph();updateQuizCard();updateScorePill();
+loadDsKey();
+
+// ── Font scale ──
+const FONT_SCALE_KEY = 'stats_viz_font_scale';
+(function initFontScale() {
+  let scale = 1;
+  try {
+    const saved = localStorage.getItem(FONT_SCALE_KEY);
+    if (saved) scale = parseFloat(saved) || 1;
+  } catch(e) {}
+  document.documentElement.style.fontSize = (17 * scale) + 'px';
+  document.getElementById('font-scale-slider').value = Math.round(scale * 100);
+  document.getElementById('font-scale-label').innerText = Math.round(scale * 100) + '%';
+  document.getElementById('font-scale-slider').oninput = function () {
+    const pct = parseInt(this.value);
+    scale = pct / 100;
+    document.documentElement.style.fontSize = (17 * scale) + 'px';
+    document.getElementById('font-scale-label').innerText = pct + '%';
+  };
+  document.getElementById('font-scale-slider').onchange = function () {
+    localStorage.setItem(FONT_SCALE_KEY, scale);
+    resetAutoSave();
+  };
+  document.getElementById('font-scale-slider').ondblclick = function () {
+    this.value = 100;
+    scale = 1;
+    document.documentElement.style.fontSize = '17px';
+    document.getElementById('font-scale-label').innerText = '100%';
+    localStorage.setItem(FONT_SCALE_KEY, 1);
+  };
+})();
+
+// ── DeepSeek Integration (wired from MeWorld pattern) ──
+
+function loadDsKey() {
+  const saved = localStorage.getItem('stats_viz_ds_key');
+  if (saved) {
+    document.getElementById('ds-api-key').value = saved;
+  } else {
+    // Preload from MeWorld .env — stored locally, never displayed
+    const embedded = 'sk-2fc4cc5ed6184f87be8837bc6ad7a3ff';
+    localStorage.setItem('stats_viz_ds_key', embedded);
+    document.getElementById('ds-api-key').value = embedded;
+  }
+}
+document.getElementById('ds-api-key').oninput = function () {
+  localStorage.setItem('stats_viz_ds_key', this.value.trim());
+};
+
+function getDsKey() {
+  return document.getElementById('ds-api-key').value.trim() || localStorage.getItem('stats_viz_ds_key') || '';
+}
+
+const ATTENDING_SYSTEM = `You are an attending physician teaching statistics for USMLE / board exam preparation. Your philosophy: mechanism-first, first-principles reasoning. Never memorize — explain from the ground up.
+
+Voice rules:
+- Spoken words only. Short sentences.
+- Specific concrete details. Visual language: "imagine the hazard curve shifting right" not "the hazard ratio decreased."
+- No hedging. No grandstanding.
+- Explain WHY the wrong answer is wrong, not just that it is.
+- Every line must sound like it came out of a real mouth at the bedside.
+- Action over explanation — show what the number means, don't just define it.
+
+When a student clicks an option, they see a graph showing the scenario that option implies.
+Your job: explain in attending voice why that interpretation is correct or incorrect, connecting the graph to the concept.
+Be brief — 3 to 5 sentences max. Make the concept stick.`;
+
+async function askDeepSeek(qIdx, optIdx) {
+  const key = getDsKey();
+  if (!key) {
+    document.getElementById('cbody-formula').innerHTML = '<span class="body-text" style="color:#ef4444">Set your DeepSeek API key in Tools &amp; JSON first.</span>';
+    switchCardTab('formula');
+    return;
+  }
+
+  const q = QUESTION_BANK[qIdx];
+  const opt = q.options[optIdx];
+  const formulaEl = document.getElementById('cbody-formula');
+
+  formulaEl.innerHTML = `<span class="body-text" style="display:flex;align-items:center;gap:6px"><svg style="animation:spin 1s linear infinite;width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg> Asking DeepSeek...</span>`;
+  switchCardTab('formula');
+
+  const hr = opt.graph ? opt.graph.hr : 0.60;
+  const brate = opt.graph ? opt.graph.brate : 0.30;
+
+  const userMsg = `Question: ${q.stem}
+
+Option the student clicked: "${opt.text}"
+Current graph parameters: Hazard Ratio = ${hr.toFixed(2)}, Baseline event rate = ${(brate*100).toFixed(0)}%
+Pre-written explanation: ${opt.desc}
+Correct answer index: ${q.correct} (this option is index ${optIdx})
+
+Explain in attending voice why this specific option is ${optIdx===q.correct?'correct':'incorrect'}. Connect the hazard ratio concept to the graph. 3-5 sentences.`;
+
+  try {
+    const r = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 400,
+        temperature: 0.35,
+        messages: [
+          { role: 'system', content: ATTENDING_SYSTEM },
+          { role: 'user', content: userMsg }
+        ]
+      })
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      throw new Error(err || `DeepSeek error ${r.status}`);
+    }
+    const data = await r.json();
+    const reply = data.choices?.[0]?.message?.content?.trim() || 'No response.';
+
+    formulaEl.innerHTML = `<span class="math-line">HR=${hr.toFixed(2)} → 1.0 − ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}% trimmed</span><span class="body-text">${opt.desc}</span><div class="ai-reply"><div class="ai-reply-label">Attending (DeepSeek)</div>${reply}</div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx})">Ask again</button>`;
+  } catch (e) {
+    formulaEl.innerHTML = `<span class="body-text" style="color:#ef4444">Error: ${e.message}</span><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx})">Retry</button>`;
+  }
+}
+</script>
+</body>
+</html>
