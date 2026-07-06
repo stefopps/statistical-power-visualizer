@@ -62,7 +62,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .chart-panel canvas{width:100%!important;height:100%!important}
 
 /* ── Floating card — the command center ── */
-.float-card{position:absolute;z-index:10;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border:1px solid #e5e7eb;border-radius:10px;min-width:140px;box-shadow:0 2px 16px rgba(0,0,0,.06);user-select:none;overflow:hidden;cursor:grab}
+.float-card{position:absolute;z-index:10;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border:1px solid #e5e7eb;border-radius:10px;min-width:140px;box-shadow:0 2px 16px rgba(0,0,0,.06);user-select:none;overflow:visible;cursor:grab}
 .float-card:active{cursor:default}
 .float-card .card-tabs{display:flex;border-bottom:1px solid #f3f4f6}
 .float-card .card-tab{padding:10px 16px;font-family:'Inter',sans-serif;font-size:.6875rem;font-weight:600;color:#9ca3af;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;flex:1}
@@ -82,7 +82,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .float-card .stats-row .val.red{color:#ef4444}
 .float-card .resize-handle{position:absolute;bottom:0;right:0;width:14px;height:14px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,#d1d5db 50%);border-radius:0 0 10px 0;opacity:.4;transition:opacity .15s}
 .float-card .resize-handle:hover{opacity:.8}
-.float-card .card-body{padding:18px 20px;overflow-y:auto;font-size:.6875rem;line-height:1.6;min-height:40px;max-height:300px}
+.float-card .card-body{padding:18px 20px 14px 20px;font-size:.6875rem;line-height:1.6;min-height:40px}
 .card-hidden{display:none}
 
 /* ── Quiz sidebar ── */
@@ -120,6 +120,9 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .q-label{font-size:.5625rem;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-bottom:2px}
 .show-trap-btn{font-size:.5625rem;color:#f87171;background:none;border:1px solid #fecaca;border-radius:3px;padding:3px 6px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px}
 .show-trap-btn:hover{background:#fef2f2}
+.compare-btn{font-size:.5625rem;color:#6366f1;background:none;border:1px solid #c7d2fe;border-radius:3px;padding:3px 6px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px;display:none}
+.compare-btn:hover{background:#eef2ff}
+.compare-btn.visible{display:inline-block}
 .hr-def{font-size:.5625rem;color:#9ca3af;line-height:1.4;padding:6px 8px;background:#f9fafb;border-radius:4px;border-left:2px solid #e5e7eb}
 .hr-def strong{color:#6b7280}
 
@@ -225,6 +228,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
         <div class="q-stem-text" id="q-stem"></div>
         <div id="q-options"></div>
         <button class="show-trap-btn" id="show-trap-btn" onclick="toggleTrapCurve()">Compare: Option B (60% reduction) curve</button>
+        <button class="compare-btn" id="compare-btn" onclick="toggleCompareCurves()">Show baseline curves</button>
       </div>
     </div>
 
@@ -357,7 +361,7 @@ async function loadQuestions() {
 // ═══ STATE ═══
 const SK = 'stats_viz_questions';
 let qState = loadQS();
-let currentQ = 0, qAnswered = false, showTrap = false, qMode = 'viz';
+let currentQ = 0, qAnswered = false, showTrap = false, showCompare = false, qMode = 'viz';
 let qzHR = 0.60, qzBRate = 0.30, qzTreat = 0.18;
 let activeCardTab = 'formula';
 
@@ -425,6 +429,8 @@ function renderQuestion() {
   switchCardTab(qAnswered ? 'answer' : 'formula');
 
   document.getElementById('show-trap-btn').style.display = (currentQ===0) ? '' : 'none';
+  document.getElementById('compare-btn').classList.remove('visible');
+  showCompare = false;
   document.getElementById('prev-btn').style.visibility = currentQ===0 ? 'hidden' : '';
   document.getElementById('next-btn').style.visibility = currentQ===QUESTION_BANK.length-1 ? 'hidden' : '';
   updateScorePill();
@@ -453,6 +459,10 @@ function pickAnswer(i) {
     document.getElementById('cbody-formula').innerHTML =
       renderMath('<span class="math-line">\\(HR = '+opt.graph.hr.toFixed(2)+' \\rightarrow 1.0 - '+opt.graph.hr.toFixed(2)+' = '+(1-opt.graph.hr).toFixed(2)+' = '+((1-opt.graph.hr)*100).toFixed(0)+'\\%\\text{ prevented}\\)</span><span class="body-text">'+renderMath(opt.desc)+'</span><button class="ask-ai-btn" onclick="askDeepSeek('+currentQ+','+i+')">Ask Immersa</button>');
     switchCardTab('formula');
+    // Always show baseline comparison toggle
+    showCompare = false;
+    document.getElementById('compare-btn').classList.add('visible');
+    document.getElementById('compare-btn').innerText = 'Show baseline curves';
   }
 
   if (qMode==='viz') return;
@@ -468,15 +478,26 @@ function pickAnswer(i) {
 
 function applyGraphPreset(hr, br) { qzHR=hr; qzBRate=br; qzTreat=hr*br; }
 
-function nextQuestion() { if (currentQ<QUESTION_BANK.length-1){currentQ++;qAnswered=false;showTrap=false;renderQuestion()} }
-function prevQuestion() { if (currentQ>0){currentQ--;qAnswered=false;showTrap=false;renderQuestion()} }
+function nextQuestion() { if (currentQ<QUESTION_BANK.length-1){currentQ++;qAnswered=false;showTrap=false;showCompare=false;renderQuestion()} }
+function prevQuestion() { if (currentQ>0){currentQ--;qAnswered=false;showTrap=false;showCompare=false;renderQuestion()} }
 function toggleTrapCurve(){showTrap=!showTrap;document.getElementById('show-trap-btn').innerText=showTrap?'Hide trap curve':'Compare: Option B (60% reduction) curve';updateQuizGraph()}
+function toggleCompareCurves(){
+  showCompare=!showCompare;
+  const btn = document.getElementById('compare-btn');
+  btn.innerText = showCompare ? 'Hide baseline curves' : 'Show baseline curves';
+  updateQuizGraph();
+}
 
 function updateQuizGraph(){
-  const xv=[],cy=[],ty=[],hy=[],trapY=[];
-  for(let t=0;t<=6;t+=.05){xv.push(t);cy.push(1-Math.exp(-qzBRate*t*2.5));ty.push(1-Math.exp(-qzTreat*t*2.5));hy.push(1-Math.exp(-qzBRate*t*2.5));trapY.push(1-Math.exp(-qzBRate*0.40*t*2.5))}
-  chartQuiz.data.labels=xv;chartQuiz.data.datasets[0].data=cy;chartQuiz.data.datasets[1].data=ty;chartQuiz.data.datasets[2].data=hy;chartQuiz.data.datasets[3].data=trapY;
-  chartQuiz.setDatasetVisibility(3,showTrap);chartQuiz.update();
+  const xv=[],cy=[],ty=[],hy=[],trapY=[],baseCy=[],baseTy=[];
+  const q = QUESTION_BANK[currentQ];
+  const bg = q.baseGraph;
+  for(let t=0;t<=6;t+=.05){xv.push(t);cy.push(1-Math.exp(-qzBRate*t*2.5));ty.push(1-Math.exp(-qzTreat*t*2.5));hy.push(1-Math.exp(-qzBRate*t*2.5));trapY.push(1-Math.exp(-qzBRate*0.40*t*2.5));baseCy.push(1-Math.exp(-bg.brate*t*2.5));baseTy.push(1-Math.exp(-bg.brate*bg.hr*t*2.5))}
+  chartQuiz.data.labels=xv;chartQuiz.data.datasets[0].data=cy;chartQuiz.data.datasets[1].data=ty;chartQuiz.data.datasets[2].data=hy;chartQuiz.data.datasets[3].data=trapY;chartQuiz.data.datasets[4].data=baseCy;chartQuiz.data.datasets[5].data=baseTy;
+  chartQuiz.setDatasetVisibility(3,showTrap);
+  chartQuiz.setDatasetVisibility(4,showCompare);
+  chartQuiz.setDatasetVisibility(5,showCompare);
+  chartQuiz.update();
 }
 function updateQuizCard(){
   const hr=qzHR,br=qzBRate,tr=hr*br,pc=(1-hr)*100;
@@ -491,7 +512,7 @@ function updateQuizCard(){
 // ═══ Chart plugins ═══
 const qzDimPlugin={id:'qzDim',afterDraw(chart){if(activeTab!=='quiz')return;const{ctx,chartArea:{top,bottom,left,right},scales:{x,y}}=chart;const td=2.5,xd=x.getPixelForValue(td);const yc=y.getPixelForValue(1-Math.exp(-qzBRate*td*2.5));const yt=y.getPixelForValue(1-Math.exp(-qzTreat*td*2.5));const hr=qzHR,kept=hr*100,trimmed=(1-hr)*100;ctx.save();ctx.strokeStyle='rgba(0,0,0,.1)';ctx.lineWidth=1;ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(xd,top);ctx.lineTo(xd,bottom);ctx.stroke();ctx.setLineDash([]);[{yy:yc,c:'#ef4444',l:'Control '+(qzBRate*100).toFixed(0)+'%'},{yy:yt,c:'#2563eb',l:'Treatment '+(qzTreat*100).toFixed(0)+'%'}].forEach(p=>{ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(xd,p.yy,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#374151';ctx.font='600 11px Inter,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(p.l,xd+12,p.yy)});const bx=xd+100;ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=2;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(bx,yc);ctx.lineTo(bx,yt);ctx.stroke();[yc,yt].forEach(yy=>{ctx.beginPath();ctx.moveTo(bx-8,yy);ctx.lineTo(bx+8,yy);ctx.stroke()});ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.moveTo(bx,yt);ctx.lineTo(bx-5,yt+10);ctx.lineTo(bx+5,yt+10);ctx.fill();ctx.beginPath();ctx.moveTo(bx,yc);ctx.lineTo(bx-5,yc-10);ctx.lineTo(bx+5,yc-10);ctx.fill();const gm=(yc+yt)/2;ctx.fillStyle='#1a1a2e';ctx.font='700 13px Inter,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('↓ '+trimmed.toFixed(0)+'%',bx+16,gm-8);ctx.fillStyle='#6b7280';ctx.font='400 10px Inter,sans-serif';ctx.fillText('reduction in hazard',bx+16,gm+8);const barX=right-320,barW=290,barHB=16,barR=3,barGap=18,keptW=(kept/100)*barW,trimW=(trimmed/100)*barW;const barYc=bottom-68,barYt=bottom-34;ctx.fillStyle='#6b7280';ctx.font='500 .625rem Inter,sans-serif';ctx.textAlign='left';ctx.fillText('Hazard Velocity',barX,barYc-9);ctx.fillStyle='#e5e7eb';ctx.strokeStyle='#d1d5db';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(barX,barYc,barW,barHB,barR);ctx.fill();ctx.stroke();ctx.fillStyle='#374151';ctx.font='600 .625rem Inter,sans-serif';ctx.textAlign='right';ctx.fillText('Control 100%',barX+barW-8,barYc+barHB/2+1);if(keptW>1){ctx.fillStyle='#93c5fd';ctx.beginPath();ctx.roundRect(barX,barYt,keptW,barHB,{tl:barR,tr:0,bl:barR,br:0});ctx.fill();ctx.fillStyle='#1e40af';ctx.font='700 .625rem Inter,sans-serif';ctx.textAlign='center';ctx.fillText('Kept '+kept.toFixed(0)+'%',barX+keptW/2,barYt+barHB/2+1)}if(trimW>1){ctx.fillStyle='rgba(252,165,165,.2)';ctx.strokeStyle='#fca5a5';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.roundRect(barX+keptW,barYt,trimW,barHB,{tl:0,tr:barR,bl:0,br:barR});ctx.fill();ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#991b1b';ctx.font='700 .625rem Inter,sans-serif';ctx.textAlign='center';ctx.fillText(trimmed.toFixed(0)+'% prevented',barX+keptW+trimW/2,barYt+barHB/2+1)}ctx.fillStyle='#6b7280';ctx.font='500 .625rem Inter,sans-serif';ctx.textAlign='left';ctx.fillText('Tx',barX-28,barYt+barHB/2+1);const bracketX=barX-16;ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(bracketX,barYc+barHB);ctx.lineTo(bracketX,barYt);ctx.stroke();ctx.beginPath();ctx.moveTo(bracketX-4,barYc+barHB);ctx.lineTo(bracketX+4,barYc+barHB);ctx.stroke();ctx.beginPath();ctx.moveTo(bracketX-4,barYt);ctx.lineTo(bracketX+4,barYt);ctx.stroke();ctx.fillStyle='#1a1a2e';ctx.font='700 .75rem Inter,sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText('↓ '+(1-hr).toFixed(2)+' = '+(trimmed).toFixed(0)+'%',bracketX-10,(barYc+barHB+barYt)/2);ctx.restore()}};
 Chart.register(qzDimPlugin);
-const chartQuiz=new Chart(document.getElementById('chart-quiz'),{type:'line',data:{labels:[],datasets:[{label:'Control',data:[],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.06)',borderWidth:2,fill:true,pointRadius:0,tension:.15,order:1},{label:'Treatment',data:[],borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.06)',borderWidth:2,fill:true,pointRadius:0,tension:.15,order:1},{label:'HR=1',data:[],borderColor:'rgba(0,0,0,.12)',borderWidth:1.5,borderDash:[4,6],pointRadius:0,fill:false,order:0},{label:'Trap: HR=0.40 (60% reduction)',data:[],borderColor:'#f87171',backgroundColor:'rgba(248,113,113,.06)',borderWidth:2,borderDash:[3,5],fill:true,pointRadius:0,tension:.15,order:0,hidden:true}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'top',labels:{font:{family:'Inter',size:12,weight:'500'},color:'#6b7280',usePointStyle:true,pointStyleWidth:8,padding:16}}},scales:{x:{type:'linear',min:0,max:6,title:{display:true,text:'Time (months)',font:{family:'Inter',size:12},color:'#6b7280'},ticks:{font:{family:'Inter',size:11},color:'#9ca3af',stepSize:1},grid:{color:'rgba(0,0,0,.04)'}},y:{min:0,max:1,title:{display:true,text:'Cumulative Events',font:{family:'Inter',size:12},color:'#6b7280'},ticks:{font:{family:'Inter',size:11},color:'#9ca3af',stepSize:.2,callback:v=>(v*100).toFixed(0)+'%'},grid:{color:'rgba(0,0,0,.04)'}}},interaction:{mode:'index',intersect:false}}});
+const chartQuiz=new Chart(document.getElementById('chart-quiz'),{type:'line',data:{labels:[],datasets:[{label:'Control',data:[],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.06)',borderWidth:2,fill:true,pointRadius:0,tension:.15,order:1},{label:'Treatment',data:[],borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.06)',borderWidth:2,fill:true,pointRadius:0,tension:.15,order:1},{label:'HR=1',data:[],borderColor:'rgba(0,0,0,.12)',borderWidth:1.5,borderDash:[4,6],pointRadius:0,fill:false,order:0},{label:'Trap: HR=0.40 (60% reduction)',data:[],borderColor:'#f87171',backgroundColor:'rgba(248,113,113,.06)',borderWidth:2,borderDash:[3,5],fill:true,pointRadius:0,tension:.15,order:0,hidden:true},{label:'Baseline Control',data:[],borderColor:'rgba(99,102,241,.45)',borderWidth:2,borderDash:[2,6],pointRadius:0,fill:false,tension:.15,order:0,hidden:true},{label:'Baseline Treatment',data:[],borderColor:'rgba(99,102,241,.45)',borderWidth:2,borderDash:[8,4],pointRadius:0,fill:false,tension:.15,order:0,hidden:true}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'top',labels:{font:{family:'Inter',size:12,weight:'500'},color:'#6b7280',usePointStyle:true,pointStyleWidth:8,padding:16}}},scales:{x:{type:'linear',min:0,max:6,title:{display:true,text:'Time (months)',font:{family:'Inter',size:12},color:'#6b7280'},ticks:{font:{family:'Inter',size:11},color:'#9ca3af',stepSize:1},grid:{color:'rgba(0,0,0,.04)'}},y:{min:0,max:1,title:{display:true,text:'Cumulative Events',font:{family:'Inter',size:12},color:'#6b7280'},ticks:{font:{family:'Inter',size:11},color:'#9ca3af',stepSize:.2,callback:v=>(v*100).toFixed(0)+'%'},grid:{color:'rgba(0,0,0,.04)'}}},interaction:{mode:'index',intersect:false}}});
 
 // Quiz slider events
 document.getElementById('qz-hr-slider').oninput=function(){qzHR=parseFloat(this.value)/100;qzTreat=qzHR*qzBRate;updateQuizGraph();updateQuizCard();document.getElementById('cbody-formula').innerHTML='<span class="empty">Manual override — click an option to restore</span>'};
@@ -574,6 +595,13 @@ function applySharedSize(excludeCard) {
     if (sharedCardH) c.style.height = sharedCardH + 'px';
     else c.style.height = 'auto';
   });
+}
+
+// Let card grow/shrink to fit content — clear locked height
+function autoFitCard() {
+  sharedCardH = null;
+  saveSharedSize();
+  document.querySelectorAll('.float-card').forEach(c => { c.style.height = 'auto'; });
 }
 
 document.querySelectorAll('.float-card').forEach(card => {
@@ -838,6 +866,7 @@ async function submitChat(qIdx, optIdx) {
   inp.value = '';
   chatHistory.push({role:'student', text});
   saveChatHistory(QUESTION_BANK[qIdx].id, optIdx, chatHistory);
+  autoFitCard();
   askDeepSeek(qIdx, optIdx, text, true);
 }
 
@@ -880,6 +909,7 @@ async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
       chatHistory = loadChatHistory(q.id, optIdx);
       formulaEl.innerHTML = buildFormulaCard(qIdx, optIdx, hr, opt.desc, cached[cacheKey], true);
       switchCardTab('formula');
+      autoFitCard();
       lastAskState = { qIdx, optIdx, q, opt };
       return;
     }
@@ -941,6 +971,7 @@ Correct answer index: ${q.correct} (this option is index ${optIdx})
     saveChatHistory(q.id, optIdx, chatHistory);
 
     formulaEl.innerHTML = buildFormulaCard(qIdx, optIdx, hr, opt.desc, reply, false);
+    autoFitCard();
   } catch (e) {
     formulaEl.innerHTML = `<span class="body-text" style="color:#ef4444">Error: ${e.message}</span><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Retry</button>`;
   }
