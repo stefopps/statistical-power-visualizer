@@ -73,8 +73,6 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .float-card .stats-row .val{font-weight:700;color:#2563eb;font-size:.75rem}
 .float-card .stats-row .val.green{color:#22c55e}
 .float-card .stats-row .val.red{color:#ef4444}
-.float-card .drag-handle{font-size:.5625rem;color:#d1d5db;text-align:center;padding:6px 0 4px;letter-spacing:.04em;text-transform:uppercase;cursor:grab}
-.float-card .drag-handle:active{cursor:grabbing}
 .float-card .resize-handle{position:absolute;bottom:0;right:0;width:14px;height:14px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,#d1d5db 50%);border-radius:0 0 10px 0;opacity:.4;transition:opacity .15s}
 .float-card .resize-handle:hover{opacity:.8}
 .float-card .card-body{padding:18px 20px;overflow-y:auto;font-size:.6875rem;line-height:1.6;min-height:40px;max-height:300px}
@@ -99,7 +97,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .q-json-row button{padding:3px 8px;font-family:'Inter',sans-serif;font-size:.5625rem;font-weight:500;border-radius:4px;cursor:pointer;background:#f9fafb;color:#9ca3af;border:1px solid #e5e7eb}
 .q-json-row button:hover{background:#f3f4f6;color:#6b7280}
 /* inline mode toggle in header */
-.mode-toggle-inline{display:inline-flex;align-items:center;gap:0;margin-left:auto;margin-right:10px;cursor:pointer;font-family:'Inter',sans-serif}
+.mode-toggle-inline{display:inline-flex;align-items:center;gap:0;cursor:pointer;font-family:'Inter',sans-serif}
 .mode-toggle-inline input{opacity:0;width:0;height:0}
 .toggle-slider-sm{position:relative;display:inline-block;width:28px;height:14px;background:#d1d5db;border-radius:14px;transition:background .2s}
 .toggle-slider-sm:before{content:"";position:absolute;height:10px;width:10px;left:2px;bottom:2px;background:#fff;border-radius:50%;transition:transform .2s}
@@ -107,7 +105,9 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .mode-toggle-inline input:checked+.toggle-slider-sm:before{transform:translateX(14px)}
 
 .q-mode-bar{display:none}
+.q-top-bar{display:flex;align-items:center;justify-content:space-between;padding:0 0 12px 0}
 .q-progress{font-size:.625rem;color:#9ca3af}
+.q-number{font-size:.75rem;font-weight:700;color:#1a1a2e}
 .show-trap-btn{font-size:.5625rem;color:#f87171;background:none;border:1px solid #fecaca;border-radius:3px;padding:3px 6px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px}
 .show-trap-btn:hover{background:#fef2f2}
 .hr-def{font-size:.5625rem;color:#9ca3af;line-height:1.4;padding:6px 8px;background:#f9fafb;border-radius:4px;border-left:2px solid #e5e7eb}
@@ -177,18 +177,13 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 
   <!-- Quiz sidebar -->
   <aside class="sidebar q-sidebar" id="sidebar-quiz" style="display:none">
-    <div class="collapsible open" id="s-q-intro" style="margin-bottom:4px">
-      <div class="collapsible-header" onclick="toggleSection('s-q-intro')">
-        Drug Ad Questions <span class="q-progress" id="q-progress" style="margin-left:8px">Stat 0001</span>
-        <label class="mode-toggle-inline" onclick="event.stopPropagation()">
-          <input type="checkbox" id="mode-answer-toggle" onchange="setQMode(this.checked?'answer':'viz')">
-          <span class="toggle-slider-sm"></span>
-          <span style="font-size:.5625rem;color:#9ca3af;margin-left:4px">Answer</span>
-        </label>
-        <svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-      <div class="collapsible-body">
-      </div>
+    <div class="q-top-bar">
+      <span class="q-progress q-number" id="q-progress">Stat 0001</span>
+      <label class="mode-toggle-inline" onclick="event.stopPropagation()">
+        <input type="checkbox" id="mode-answer-toggle" onchange="setQMode(this.checked?'answer':'viz')">
+        <span class="toggle-slider-sm"></span>
+        <span style="font-size:.5625rem;color:#9ca3af;margin-left:4px">Answer</span>
+      </label>
     </div>
 
     <div class="collapsible open" id="s-q-body">
@@ -245,7 +240,6 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 
       <!-- Floating cards -->
       <div class="float-card" id="card-arr" style="top:16px;right:16px">
-        <div class="drag-handle">:: move ::</div>
         <div class="card-body">
         <div class="stats-row"><span class="key">SE</span><span class="val" id="cv-se">0.730</span></div>
         <div class="stats-row"><span class="key">ARR%</span><span class="val" id="cv-arr">0.020</span></div>
@@ -256,7 +250,6 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
       </div>
 
       <div class="float-card" id="card-hr" style="top:16px;right:16px">
-        <div class="drag-handle">:: move ::</div>
         <div class="card-body">
         <div class="stats-row"><span class="key">HR</span><span class="val green" id="cv-hr">0.60</span></div>
         <div class="stats-row"><span class="key">Control rate</span><span class="val red" id="cv-ctrl">30%</span></div>
@@ -268,7 +261,6 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
       </div>
 
       <div class="float-card" id="card-quiz" style="top:16px;right:16px">
-        <div class="drag-handle">:: move ::</div>
         <div class="card-tabs">
           <button class="card-tab active" id="ctab-formula" onclick="switchCardTab('formula')">Formula</button>
           <button class="card-tab" id="ctab-answer" onclick="switchCardTab('answer')">Answer</button>
@@ -564,69 +556,6 @@ document.querySelectorAll('.float-card').forEach(card => {
   // Apply shared sizing
   card.style.width = sharedCardW + 'px';
   if (sharedCardH) card.style.height = sharedCardH + 'px';
-
-  // Only drag from the :: move :: handle
-  const handle = card.querySelector('.drag-handle');
-  let ox = 0, oy = 0, dragging = false;
-
-  handle.addEventListener('mousedown', e => {
-    dragging = true;
-    const r = card.getBoundingClientRect();
-    ox = e.clientX - r.left;
-    oy = e.clientY - r.top;
-    card.style.cursor = 'grabbing';
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  handle.addEventListener('touchstart', e => {
-    dragging = true;
-    const r = card.getBoundingClientRect();
-    ox = e.touches[0].clientX - r.left;
-    oy = e.touches[0].clientY - r.top;
-    card.style.cursor = 'grabbing';
-    e.preventDefault();
-    e.stopPropagation();
-  }, { passive: false });
-
-  window.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const parent = card.parentElement.getBoundingClientRect();
-    card.style.left = (e.clientX - parent.left - ox) + 'px';
-    card.style.top = (e.clientY - parent.top - oy) + 'px';
-    card.style.right = 'auto';
-  });
-  window.addEventListener('touchmove', e => {
-    if (!dragging) return;
-    const parent = card.parentElement.getBoundingClientRect();
-    card.style.left = (e.touches[0].clientX - parent.left - ox) + 'px';
-    card.style.top = (e.touches[0].clientY - parent.top - oy) + 'px';
-    card.style.right = 'auto';
-  }, { passive: false });
-
-  window.addEventListener('mouseup', () => {
-    if (dragging) {
-      dragging = false;
-      card.style.cursor = '';
-      cardPositions[id] = {
-        top: parseInt(card.style.top),
-        left: parseInt(card.style.left)
-      };
-      saveCardPositions();
-      resetAutoSave();
-    }
-  });
-  window.addEventListener('touchend', () => {
-    if (dragging) {
-      dragging = false;
-      card.style.cursor = '';
-      cardPositions[id] = {
-        top: parseInt(card.style.top),
-        left: parseInt(card.style.left)
-      };
-      saveCardPositions();
-      resetAutoSave();
-    }
-  });
 });
 
 // ── Resize handles — shared sizing across all three cards ──
