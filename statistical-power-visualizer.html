@@ -12,14 +12,19 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',sans-serif;background:#f5f5f5;color:#1a1a2e;height:100vh;overflow:hidden;display:flex;flex-direction:column}
 html{font-size:17px}
-.tab-bar{display:flex;padding:0 20px;background:#fff;border-bottom:1px solid #e5e7eb;flex-shrink:0;align-items:center}
-.tab-btn{padding:12px 20px;font-family:'Inter',sans-serif;font-size:.8125rem;font-weight:600;color:#9ca3af;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer}
+.top-bar{display:flex;align-items:center;padding:8px 20px;background:#fff;border-bottom:1px solid #e5e7eb;flex-shrink:0;gap:16px}
+.top-breadcrumb{font-family:'Inter',sans-serif;font-size:.75rem;font-weight:600;color:#1a1a2e;display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none}
+.top-breadcrumb svg{width:14px;height:14px;color:#9ca3af}
+.top-section-label{font-family:'Inter',sans-serif;font-size:.5625rem;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-right:auto;white-space:nowrap}
+.tab-bar{display:flex;align-items:center;gap:0;background:#fff;padding:0 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0}
+.tab-btn{padding:10px 16px;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:600;color:#9ca3af;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s}
 .tab-btn:hover{color:#4b5563}
 .tab-btn.active{color:#2563eb;border-bottom-color:#2563eb}
 .tab-spacer{flex:1}
-.score-pill{font-size:.6875rem;font-weight:600;color:#6b7280;padding:3px 10px;background:#f3f4f6;border-radius:10px;display:none}
-.score-pill.show{display:block}
-.score-pill .correct{color:#22c55e}
+.score-pill{font-size:.6875rem;color:#9ca3af;font-family:'Inter',sans-serif;white-space:nowrap;display:none;align-items:center;gap:2px}
+.score-pill.show{display:flex}
+.score-pill .correct{color:#059669;font-weight:600}
+.score-pill .slash{color:#d1d5db}
 .layout{display:flex;flex:1;min-height:0}
 .sidebar{width:280px;min-width:280px;background:#fff;padding:20px 16px;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;z-index:2;overflow-y:auto;gap:0}
 .sidebar h2{font-size:1rem;font-weight:700;color:#111}
@@ -107,9 +112,12 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .mode-toggle-inline input:checked+.toggle-slider-sm:before{transform:translateX(14px)}
 
 .q-mode-bar{display:none}
-.q-top-bar{display:flex;align-items:center;justify-content:space-between;padding:0 0 12px 0}
+.q-top-bar{display:flex;align-items:center;justify-content:space-between;padding:0 0 10px 0}
 .q-progress{font-size:.625rem;color:#9ca3af}
-.q-number{font-size:.75rem;font-weight:700;color:#1a1a2e}
+.q-number{font-size:.875rem;font-weight:700;color:#1a1a2e}
+.q-ad-text{font-size:.6875rem;color:#4b5563;line-height:1.6;padding:8px 10px;background:#f9fafb;border-radius:4px;border-left:2px solid #e5e7eb;margin-bottom:6px;font-family:'Inter',sans-serif}
+.q-stem-text{font-size:.75rem;font-weight:600;color:#111;line-height:1.45;margin-bottom:10px}
+.q-label{font-size:.5625rem;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-bottom:2px}
 .show-trap-btn{font-size:.5625rem;color:#f87171;background:none;border:1px solid #fecaca;border-radius:3px;padding:3px 6px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px}
 .show-trap-btn:hover{background:#fef2f2}
 .hr-def{font-size:.5625rem;color:#9ca3af;line-height:1.4;padding:6px 8px;background:#f9fafb;border-radius:4px;border-left:2px solid #e5e7eb}
@@ -152,12 +160,16 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 </head>
 <body>
 
+<div class="top-bar">
+  <span class="top-breadcrumb" id="top-breadcrumb">Oncology Biostats <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
+  <span class="score-pill" id="score-pill"><span class="correct" id="score-correct">0</span><span class="slash">/</span><span id="score-total">0</span></span>
+</div>
+
 <div class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('arr')">ARR / Two Spikes</button>
+  <button class="tab-btn active" onclick="switchTab('arr')">ARR</button>
   <button class="tab-btn" onclick="switchTab('hr')">Hazard Ratio</button>
   <button class="tab-btn" onclick="switchTab('quiz')">Questions</button>
   <span class="tab-spacer"></span>
-  <span class="score-pill" id="score-pill"><span class="correct" id="score-correct">0</span>/<span id="score-total">0</span></span>
 </div>
 
 <div class="layout">
@@ -207,8 +219,10 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
     <div class="collapsible open" id="s-q-body">
       <div class="collapsible-header" onclick="toggleSection('s-q-body')">Question<svg class="collapsible-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
       <div class="collapsible-body">
-        <div style="font-size:.75rem;color:#374151;line-height:1.5;padding:10px 8px;background:#f3f4f6;border-radius:4px;border-left:2px solid #d1d5db;margin-bottom:8px" id="q-ad"></div>
-        <div style="font-size:.75rem;font-weight:600;color:#111;line-height:1.4;margin-bottom:8px" id="q-stem"></div>
+        <div class="q-label">Advertisement</div>
+        <div class="q-ad-text" id="q-ad"></div>
+        <div class="q-label">Question</div>
+        <div class="q-stem-text" id="q-stem"></div>
         <div id="q-options"></div>
         <button class="show-trap-btn" id="show-trap-btn" onclick="toggleTrapCurve()">Compare: Option B (60% reduction) curve</button>
       </div>
@@ -490,7 +504,7 @@ let activeTab='arr';
 function switchTab(t){
   activeTab=t;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.tab-bar .tab-btn').forEach(b=>{if(b.textContent.toLowerCase().includes(t==='quiz'?'questions':t==='arr'?'two':'hazard'))b.classList.add('active')});
+  document.querySelectorAll('.tab-bar .tab-btn').forEach(b=>{if(b.textContent.toLowerCase().includes(t==='quiz'?'questions':t==='arr'?'arr':t))b.classList.add('active')});
   document.querySelectorAll('.chart-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+(t==='quiz'?'quiz':t==='arr'?'arr':'hr')).classList.add('active');
   document.getElementById('sidebar-arr').style.display=t==='arr'?'':'none';
