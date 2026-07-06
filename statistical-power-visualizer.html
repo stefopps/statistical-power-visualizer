@@ -63,6 +63,7 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .float-card .card-tab.active{color:#2563eb;border-bottom-color:#2563eb}
 .float-card .card-body .math-line{font-weight:700;color:#2563eb;margin-bottom:6px;display:block}
 .float-card .card-body .body-text{color:#374151;margin-bottom:8px;display:block}
+.float-card .card-body .body-text strong{color:#1a1a2e;font-weight:700}
 .float-card .card-body .answer-correct{color:#166534}
 .float-card .card-body .answer-wrong{color:#991b1b}
 .float-card .card-body .trap-note{margin-top:6px;padding:6px 8px;background:#fff3cd;border-radius:4px;color:#92400e;font-size:.625rem}
@@ -121,6 +122,14 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .ai-reply p{margin:0 0 4px;color:#374151}
 
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* Voice input */
+.voice-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.mic-btn{width:32px;height:32px;border-radius:50%;border:1px solid #e5e7eb;background:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.mic-btn:hover{background:#fef2f2;border-color:#fca5a5}
+.mic-btn.recording{background:#fee2e2;border-color:#ef4444;animation:pulse 1.5s ease-in-out infinite}
+.voice-preview{font-size:.625rem;color:#9ca3af;font-style:italic;line-height:1.3;flex:1;min-width:0}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 6px rgba(239,68,68,0)}}
 </style>
 </head>
 <body>
@@ -285,6 +294,21 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 </div>
 
 <script>
+// ── ATTENDING SYSTEM PROMPT (must be first — top of script, no TDZ) ──
+const ATTENDING_SYSTEM = `You are an attending physician teaching statistics for USMLE / board exam preparation. Your philosophy: mechanism-first, first-principles reasoning. Never memorize — explain from the ground up.
+
+Voice rules:
+- Spoken words only. Short sentences.
+- Specific concrete details. Visual language: "imagine the hazard curve shifting right" not "the hazard ratio decreased."
+- No hedging. No grandstanding.
+- Explain WHY the wrong answer is wrong, not just that it is.
+- Every line must sound like it came out of a real mouth at the bedside.
+- Action over explanation — show what the number means, don't just define it.
+
+When a student clicks an option, they see a graph showing the scenario that option implies.
+Your job: explain in attending voice why that interpretation is correct or incorrect, connecting the graph to the concept.
+Be brief — 3 to 5 sentences max. Make the concept stick.`;
+
 // ══════════════════════════════════════════════
 //  QUESTION BANK
 // ══════════════════════════════════════════════
@@ -293,15 +317,15 @@ const QUESTION_BANK = [
     stem:"Q1a. Which is the most accurate interpretation of the Hazard Ratio (0.60)?",
     options:[
       {label:"A",text:"At the end of the study, 40% of patients on OncoMab were completely free of tumors.",graph:{hr:0.60,brate:0.30},
-       desc:"A hazard ratio measures event velocity — the rate at which tumors progress per unit time. It has nothing to say about the final number of patients who end up tumor-free. That's an absolute endpoint, not a hazard. The 0.60 tells you treatment slowed the race, not who crossed the finish line."},
+       desc:"A hazard ratio measures event velocity — the rate at which tumors progress per unit time. <strong>It has nothing to say about the final number of patients who end up tumor-free.</strong> That's an absolute endpoint, not a hazard. The 0.60 tells you treatment slowed the race, not who crossed the finish line."},
       {label:"B",text:"Patients on OncoMab have a 60% lower risk of tumor progression at any given time point.",graph:{hr:0.40,brate:0.30},
-       desc:"The reduction comes from subtracting HR from 1.0 — not from reading 0.60 as '60%.' A hazard ratio is a multiplier: 0.60 means the treatment group experiences events at 60% of the control group's rate. The eliminated portion is 1.0 − 0.60 = 0.40, or 40%. For this option to be true, you need HR = 0.40. Look at the graph — the gap is twice as wide because you've eliminated 60% of the hazard velocity."},
+       desc:"The reduction comes from subtracting HR from 1.0 — not from reading 0.60 as '60%.' <strong>A hazard ratio is a multiplier: 0.60 means the treatment group experiences events at 60% of the control group's rate. The eliminated portion is 1.0 − 0.60 = 0.40, or 40%.</strong> For this option to be true, you need HR = 0.40. Look at the graph — the gap is twice as wide because you've eliminated 60% of the hazard velocity."},
       {label:"C",text:"Patients on OncoMab have a 40% lower probability of tumor progression at any given time point.",graph:{hr:0.60,brate:0.30},
-       desc:"HR = 0.60 means treatment retains 60% of the control hazard velocity. The trimmed portion — the benefit — is 1.0 − 0.60 = 0.40. At every tick of the clock, patients on OncoMab face 40% less instantaneous risk. See the velocity bar: 60% kept, 40% eliminated."},
+       desc:"HR = 0.60 means treatment retains 60% of the control hazard velocity. The trimmed portion — the benefit — is 1.0 − 0.60 = 0.40. <strong>At every tick of the clock, patients on OncoMab face 40% less instantaneous risk.</strong> See the velocity bar: 60% kept, 40% eliminated."},
       {label:"D",text:"Median survival time for OncoMab patients is 40% longer than standard chemotherapy.",graph:{hr:0.71,brate:0.30},
-       desc:"Median survival and hazard ratio are connected but not interchangeable. If median were truly 40% longer, HR would be ≈ 1/1.4 ≈ 0.71 — the graph shows curves pulled closer together. Same 40% number, completely different thing: time extension vs velocity reduction."},
+       desc:"<strong>Median survival and hazard ratio are connected but not interchangeable.</strong> If median were truly 40% longer, HR would be ≈ 1/1.4 ≈ 0.71 — the graph shows curves pulled closer together. Same 40% number, completely different thing: time extension vs velocity reduction."},
       {label:"E",text:"Patients on OncoMab are 0.60 times as likely to experience severe medication side effects.",graph:{hr:0.60,brate:0.30},
-       desc:"A hazard ratio is endpoint-specific. This trial's HR was calculated for Progression-Free Survival — the rate at which tumors grow. Side effects are a completely different endpoint with their own rates. Reusing the PFS hazard ratio for adverse events is like using a speedometer to measure fuel efficiency."}
+       desc:"A hazard ratio is endpoint-specific. This trial's HR was calculated for Progression-Free Survival — the rate at which tumors grow. Side effects are a completely different endpoint with their own rates. <strong>Reusing the PFS hazard ratio for adverse events is like using a speedometer to measure fuel efficiency.</strong>"}
     ], correct:2, baseGraph:{hr:0.60,brate:0.30},
     explanation:"A hazard ratio is a velocity. HR = 0.60 means the treatment group accumulates events at 60% of the speed of the control group. The 40% eliminated is 1.0 − 0.60. Every percentage point trimmed is less hazard velocity carried forward.",
     trap:"The brain sees 0.60 and reaches for 60%. Don't. Subtract from 1.0. The hazard ratio is what you KEEP. The reduction is what you LOST." },
@@ -309,15 +333,15 @@ const QUESTION_BANK = [
     stem:"Q2a. What measure is the 20% figure, and what is the absolute benefit?",
     options:[
       {label:"A",text:"The advertisement reports the absolute risk reduction (ARR) of 0.6 percentage points correctly.",graph:{hr:0.80,brate:0.30},
-       desc:"ARR = 3.0% − 2.4% = 0.6 ppt. That's the absolute gap. But the ad says 20% — which is the relative calculation: (3.0% − 2.4%) / 3.0% = 0.6/3.0 = 20%. The ad reports RRR, not ARR. It exploits a perceptual hack: 20% sounds enormous, 0.6 ppt sounds trivial. Same trial."},
+       desc:"ARR = 3.0% − 2.4% = 0.6 ppt. That's the absolute gap. But the ad says 20% — which is the relative calculation: (3.0% − 2.4%) / 3.0% = 0.6/3.0 = 20%. <strong>The ad reports RRR, not ARR. It exploits a perceptual hack: 20% sounds enormous, 0.6 ppt sounds trivial. Same trial.</strong>"},
       {label:"B",text:"The advertisement reports relative risk reduction (RRR) of 20%, but the ARR is only 0.6 ppt and NNT is approximately 167.",graph:{hr:0.80,brate:0.30},
-       desc:"RRR = (3.0% − 2.4%) / 3.0% = 20%. The absolute difference is 0.6 ppt — a sliver. NNT = 1/0.006 ≈ 167. You need to treat 167 people to prevent ONE cardiac event. The other 166 get the drug, pay the cost, bear side effects, and get zero benefit."},
+       desc:"RRR = (3.0% − 2.4%) / 3.0% = 20%. The absolute difference is 0.6 ppt — a sliver. NNT = 1/0.006 ≈ 167. <strong>You need to treat 167 people to prevent ONE cardiac event. The other 166 get the drug, pay the cost, bear side effects, and get zero benefit.</strong>"},
       {label:"C",text:"The hazard ratio of 0.80 means an 80% reduction in events.",graph:{hr:0.80,brate:0.30},
-       desc:"Same error as Q1 — the brain sees 0.80 and reaches for 80%. HR = 0.80 means treatment retains 80% of control hazard. Only 20% gets eliminated. 1.0 − 0.80 = 0.20. The velocity bar shows a sliver of red (20% trimmed) against a wall of blue (80% kept)."},
+       desc:"Same error as Q1 — the brain sees 0.80 and reaches for 80%. <strong>HR = 0.80 means treatment retains 80% of control hazard. Only 20% gets eliminated.</strong> 1.0 − 0.80 = 0.20. The velocity bar shows a sliver of red (20% trimmed) against a wall of blue (80% kept)."},
       {label:"D",text:"The p-value of 0.03 confirms the 20% reduction is both statistically and clinically significant.",graph:{hr:0.80,brate:0.30},
-       desc:"The p-value answers one question: could this be chance? At p=0.03, probably not. But it says nothing about clinical importance. An ARR of 0.6 ppt may be statistically detectable but clinically meaningless. Statistical significance ≠ clinical significance."},
+       desc:"The p-value answers one question: could this be chance? At p=0.03, probably not. But it says nothing about clinical importance. An ARR of 0.6 ppt may be statistically detectable but clinically meaningless. <strong>Statistical significance ≠ clinical significance.</strong>"},
       {label:"E",text:"The NNT is 20, meaning 20 patients need treatment to prevent one event.",graph:{hr:0.80,brate:0.30},
-       desc:"NNT = 1/0.006 ≈ 167, not 20. To get NNT=20 you'd need ARR=5 ppt — impossible given the baseline rate is only 3.0%. Always verify NNT against baseline."}
+       desc:"NNT = 1/0.006 ≈ 167, not 20. To get NNT=20 you'd need ARR=5 ppt — impossible given the baseline rate is only 3.0%. <strong>Always verify NNT against baseline.</strong>"}
     ], correct:1, baseGraph:{hr:0.80,brate:0.30},
     explanation:"Relative risk is a ratio. Absolute risk is a subtraction. Ratios look bigger than subtractions when the baseline is small. That's the entire trick. The ad gives you the ratio (20%) and hopes you never ask about the subtraction (0.6 ppt).",
     trap:"Whenever a drug ad gives a percentage, ask: 'Relative to what?' If they conceal the baseline rates, they're hiding the absolute benefit behind the relative framing." },
@@ -325,15 +349,15 @@ const QUESTION_BANK = [
     stem:"Q3a. Which concern about this claim is most justified?",
     options:[
       {label:"A",text:"The p-value of 0.04 definitively proves VitaBoost works, and the 2.1 point improvement is clinically meaningful.",graph:{hr:0.90,brate:0.25},
-       desc:"p=0.04 means '4% chance this is random noise.' It doesn't measure effect size. A 2.1 point gain might be a rounding error — or transformative. The p-value doesn't distinguish. HR=0.90 shows the effect is narrow: only 10% trimmed. That's a faint signal."},
+       desc:"<strong>p=0.04 means '4% chance this is random noise.' It doesn't measure effect size.</strong> A 2.1 point gain might be a rounding error — or transformative. The p-value doesn't distinguish. HR=0.90 shows the effect is narrow: only 10% trimmed. That's a faint signal."},
       {label:"B",text:"The sample size is too small to detect any effect, so the study should not have been published.",graph:{hr:0.90,brate:0.25},
-       desc:"N=120 can detect moderate effects just fine. The study DID detect an effect (p=0.04). The issue isn't detection — it's that the detected effect is tiny. Small samples detect big effects; big samples detect trivial ones. This is the latter."},
+       desc:"N=120 can detect moderate effects just fine. The study DID detect an effect (p=0.04). The issue isn't detection — it's that the detected effect is tiny. <strong>Small samples detect big effects; big samples detect trivial ones. This is the latter.</strong>"},
       {label:"C",text:"The confidence interval (0.1 to 4.1) barely excludes zero, suggesting a marginal effect that may not be clinically meaningful.",graph:{hr:0.90,brate:0.25},
-       desc:"The 95% CI runs 0.1 to 4.1. The lower bound practically touches zero — meaning the true effect could be a fraction of a point. When the lower boundary of your confidence interval is a rounding error away from nothing, 'clinically proven' is reckless. The curves nearly overlap because HR=0.90 means 90% of the hazard remains."},
+       desc:"The 95% CI runs 0.1 to 4.1. The lower bound practically touches zero — meaning the true effect could be a fraction of a point. <strong>When the lower boundary of your confidence interval is a rounding error away from nothing, 'clinically proven' is reckless.</strong> The curves nearly overlap because HR=0.90 means 90% of the hazard remains."},
       {label:"D",text:"Since this was only a 12-week study, results cannot be generalized to any population.",graph:{hr:0.90,brate:0.25},
-       desc:"Duration limits generalizability, but 'cannot be generalized to ANY population' is extreme. The deeper problem: even within the studied population, the effect might be trivial. Generalizability is secondary when the finding itself may not matter."},
+       desc:"Duration limits generalizability, but 'cannot be generalized to ANY population' is extreme. The deeper problem: even within the studied population, the effect might be trivial. <strong>Generalizability is secondary when the finding itself may not matter.</strong>"},
       {label:"E",text:"The cognitive assessment used the wrong scale; results should be in standard deviations.",graph:{hr:0.90,brate:0.25},
-       desc:"Standardized effect sizes have value, but raw scale points matter too — 2.1 points on a 30-point MMSE is different from 2.1 on a 300-point battery. The real problem isn't the measurement scale — it's that the CI barely excludes zero regardless of units."}
+       desc:"Standardized effect sizes have value, but raw scale points matter too — 2.1 points on a 30-point MMSE is different from 2.1 on a 300-point battery. <strong>The real problem isn't the measurement scale — it's that the CI barely excludes zero regardless of units.</strong>"}
     ], correct:2, baseGraph:{hr:0.90,brate:0.25},
     explanation:"A CI that barely excludes zero is a warning. The true effect is somewhere between 'barely detectable' and 'moderate.' Statistical significance rules out chance — it doesn't rule out triviality. The CI width tells you about precision; the lower bound tells you the worst plausible scenario.",
     trap:"A p-value whispers 'this probably isn't noise.' A CI shouts 'but it might also be nothing.' Listen to the CI." }
@@ -781,21 +805,8 @@ function getDsKey() {
   return document.getElementById('ds-api-key').value.trim() || localStorage.getItem('stats_viz_ds_key') || '';
 }
 
-const ATTENDING_SYSTEM = `You are an attending physician teaching statistics for USMLE / board exam preparation. Your philosophy: mechanism-first, first-principles reasoning. Never memorize — explain from the ground up.
 
-Voice rules:
-- Spoken words only. Short sentences.
-- Specific concrete details. Visual language: "imagine the hazard curve shifting right" not "the hazard ratio decreased."
-- No hedging. No grandstanding.
-- Explain WHY the wrong answer is wrong, not just that it is.
-- Every line must sound like it came out of a real mouth at the bedside.
-- Action over explanation — show what the number means, don't just define it.
-
-When a student clicks an option, they see a graph showing the scenario that option implies.
-Your job: explain in attending voice why that interpretation is correct or incorrect, connecting the graph to the concept.
-Be brief — 3 to 5 sentences max. Make the concept stick.`;
-
-async function askDeepSeek(qIdx, optIdx) {
+async function askDeepSeek(qIdx, optIdx, followUpText) {
   const key = getDsKey();
   if (!key) {
     document.getElementById('cbody-formula').innerHTML = '<span class="body-text" style="color:#ef4444">Set your DeepSeek API key in Tools &amp; JSON first.</span>';
@@ -807,20 +818,26 @@ async function askDeepSeek(qIdx, optIdx) {
   const opt = q.options[optIdx];
   const formulaEl = document.getElementById('cbody-formula');
 
-  formulaEl.innerHTML = `<span class="body-text" style="display:flex;align-items:center;gap:6px"><svg style="animation:spin 1s linear infinite;width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg> Asking DeepSeek...</span>`;
+  // Store current state for voice follow-up
+  lastAskState = { qIdx, optIdx, q, opt };
+
+  formulaEl.innerHTML = `<span class="body-text" style="display:flex;align-items:center;gap:6px"><svg style="animation:spin 1s linear infinite;width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg> ${followUpText ? 'Responding...' : 'Asking DeepSeek...'}</span>`;
   switchCardTab('formula');
 
   const hr = opt.graph ? opt.graph.hr : 0.60;
   const brate = opt.graph ? opt.graph.brate : 0.30;
 
-  const userMsg = `Question: ${q.stem}
+  const baseMsg = `Question: ${q.stem}
 
 Option the student clicked: "${opt.text}"
 Current graph parameters: Hazard Ratio = ${hr.toFixed(2)}, Baseline event rate = ${(brate*100).toFixed(0)}%
 Pre-written explanation: ${opt.desc}
 Correct answer index: ${q.correct} (this option is index ${optIdx})
+`;
 
-Explain in attending voice why this specific option is ${optIdx===q.correct?'correct':'incorrect'}. Connect the hazard ratio concept to the graph. 3-5 sentences.`;
+  const userMsg = followUpText
+    ? `${baseMsg}\nStudent follow-up (spoken): "${followUpText}"\n\nRespond directly to what the student just said. Be conversational. Still stick to attending voice — mechanism-first, 3-5 sentences.`
+    : `${baseMsg}Explain in attending voice why this specific option is ${optIdx===q.correct?'correct':'incorrect'}. Connect the hazard ratio concept to the graph. 3-5 sentences.`;
 
   try {
     const r = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -843,9 +860,86 @@ Explain in attending voice why this specific option is ${optIdx===q.correct?'cor
     const data = await r.json();
     const reply = data.choices?.[0]?.message?.content?.trim() || 'No response.';
 
-    formulaEl.innerHTML = `<span class="math-line">HR=${hr.toFixed(2)} → 1.0 − ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}% trimmed</span><span class="body-text">${opt.desc}</span><div class="ai-reply"><div class="ai-reply-label">Attending (DeepSeek)</div>${reply}</div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx})">Ask again</button>`;
+    formulaEl.innerHTML = `<span class="math-line">HR=${hr.toFixed(2)} → 1.0 − ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}% trimmed</span><span class="body-text">${opt.desc}</span><div class="ai-reply"><div class="ai-reply-label">Attending (DeepSeek)</div>${reply}</div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending">🎤</button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx})">Ask again</button>`;
   } catch (e) {
     formulaEl.innerHTML = `<span class="body-text" style="color:#ef4444">Error: ${e.message}</span><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx})">Retry</button>`;
+  }
+}
+
+// ── Voice input (MeWorld SpeechRecognition pattern) ──
+let voiceRec = null, voiceActive = false, lastAskState = null;
+
+function speechSupported() {
+  return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+
+function toggleVoice() {
+  if (voiceActive) { stopVoice(); return; }
+  if (!speechSupported()) {
+    document.getElementById('voice-preview').innerText = 'Speech needs Chrome/Edge';
+    return;
+  }
+  startVoice();
+}
+
+function startVoice() {
+  voiceActive = true;
+  const btn = document.getElementById('mic-btn');
+  if (btn) btn.innerHTML = '🔴';
+  const prev = document.getElementById('voice-preview');
+  if (prev) prev.innerText = 'Listening...';
+
+  const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  voiceRec = new Ctor();
+  voiceRec.continuous = true;
+  voiceRec.interimResults = true;
+  voiceRec.lang = 'en-US';
+
+  let lastFinal = '';
+  voiceRec.onresult = (event) => {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      const text = result[0]?.transcript || '';
+      if (result.isFinal) {
+        lastFinal += (lastFinal ? ' ' : '') + text;
+      } else {
+        interim += text;
+      }
+    }
+    const display = (lastFinal + (lastFinal && interim ? ' ' : '') + interim).trim();
+    if (prev) prev.innerText = display || 'Listening...';
+  };
+
+  voiceRec.onerror = (event) => {
+    if (event?.error === 'not-allowed') {
+      if (prev) prev.innerText = 'Mic denied — allow in browser settings';
+    } else if (event?.error === 'no-speech') {
+      if (prev) prev.innerText = 'No speech detected';
+    }
+  };
+
+  voiceRec.onend = () => {
+    if (!voiceActive) return;
+    if (lastFinal.trim() && lastAskState) {
+      if (prev) prev.innerText = 'Sending...';
+      askDeepSeek(lastAskState.qIdx, lastAskState.optIdx, lastFinal.trim());
+    }
+    voiceActive = false;
+    if (btn) btn.innerHTML = '🎤';
+    voiceRec = null;
+  };
+
+  voiceRec.start();
+}
+
+function stopVoice() {
+  voiceActive = false;
+  const btn = document.getElementById('mic-btn');
+  if (btn) btn.innerHTML = '🎤';
+  if (voiceRec) {
+    try { voiceRec.stop(); } catch(e) {}
+    voiceRec = null;
   }
 }
 </script>
