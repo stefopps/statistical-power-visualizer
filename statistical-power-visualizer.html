@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Statistical Visualizer</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',sans-serif;background:#f5f5f5;color:#1a1a2e;height:100vh;overflow:hidden;display:flex;flex-direction:column}
@@ -130,6 +132,22 @@ input:checked+.toggle-slider:before{transform:translateX(18px)}
 .mic-btn.recording{background:#fee2e2;border-color:#ef4444;animation:pulse 1.5s ease-in-out infinite}
 .voice-preview{font-size:.625rem;color:#9ca3af;font-style:italic;line-height:1.3;flex:1;min-width:0}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 6px rgba(239,68,68,0)}}
+
+/* Chat input & history */
+.chat-input-row{display:flex;gap:6px;margin-top:10px;align-items:center}
+.chat-input{flex:1;padding:8px 10px;font-family:'Inter',sans-serif;font-size:.625rem;border:1px solid #e5e7eb;border-radius:6px;background:#fff;color:#374151;outline:none}
+.chat-input:focus{border-color:#7c3aed;box-shadow:0 0 0 2px rgba(124,58,237,.1)}
+.chat-send-btn{width:32px;height:32px;border-radius:50%;border:1px solid #7c3aed;background:#7c3aed;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0}
+.chat-send-btn:hover{background:#6d28d9}
+.chat-history{max-height:180px;overflow-y:auto;margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.chat-msg-student,.chat-msg-attending{font-size:.5625rem;line-height:1.45;padding:6px 10px;border-radius:6px;font-family:'Inter',sans-serif}
+.chat-msg-student{background:#f0f9ff;border:1px solid #bfdbfe;color:#1e40af;align-self:flex-end;max-width:90%}
+.chat-msg-attending{background:#faf8ff;border:1px solid #ddcefe;color:#374151;align-self:flex-start;max-width:90%}
+.chat-role{font-size:.4375rem;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;color:#9ca3af}
+/* KaTeX math styling */
+.katex{font-size:1.05em !important}
+.katex-display{margin:.5em 0;overflow-x:auto;overflow-y:hidden}
+.ai-reply .katex,.chat-history .katex,.body-text .katex{font-size:1em !important}
 </style>
 </head>
 <body>
@@ -419,7 +437,7 @@ function pickAnswer(i) {
     updateSlidersFromState();
     updateQuizGraph(); updateQuizCard();
     document.getElementById('cbody-formula').innerHTML =
-      '<span class="math-line">HR='+opt.graph.hr.toFixed(2)+' → 1.0 − '+opt.graph.hr.toFixed(2)+' = '+(1-opt.graph.hr).toFixed(2)+' = '+((1-opt.graph.hr)*100).toFixed(0)+'% prevented</span><span class="body-text">'+opt.desc+'</span><button class="ask-ai-btn" onclick="askDeepSeek('+currentQ+','+i+')">Ask AI &mdash; explain this option</button>';
+      '<span class="math-line">HR='+opt.graph.hr.toFixed(2)+' → 1.0 − '+opt.graph.hr.toFixed(2)+' = '+(1-opt.graph.hr).toFixed(2)+' = '+((1-opt.graph.hr)*100).toFixed(0)+'% prevented</span><span class="body-text">'+renderMath(opt.desc)+'</span><button class="ask-ai-btn" onclick="askDeepSeek('+currentQ+','+i+')">Ask Immersa</button>';
     switchCardTab('formula');
   }
 
@@ -769,6 +787,49 @@ const ATTENDING_CACHE_KEY = 'stats_viz_attending';
 function loadAttendingCache() { try { const r = localStorage.getItem(ATTENDING_CACHE_KEY); return r ? JSON.parse(r) : {}; } catch(e) { return {}; } }
 function saveAttendingCache(obj) { localStorage.setItem(ATTENDING_CACHE_KEY, JSON.stringify(obj)); }
 
+// ── KaTeX math rendering — inline \(...\) and display $$...$$ ──
+function renderMath(html) {
+  let out = html;
+  // Display math $$...$$
+  out = out.replace(/\$\$(.+?)\$\$/gs, (_, tex) => {
+    try { return katex.renderToString(tex.trim(), {throwOnError:false, displayMode:true}); }
+    catch(e) { return '<code>$$'+tex+'$$</code>'; }
+  });
+  // Inline math \(...\)
+  out = out.replace(/\\\((.+?)\\\)/gs, (_, tex) => {
+    try { return katex.renderToString(tex.trim(), {throwOnError:false}); }
+    catch(e) { return '<code>\\('+tex+'\\)</code>'; }
+  });
+  return out;
+}
+
+// ── Chat state ──
+let chatHistory = []; // {role:'student'|'attending', text:string}[]
+
+async function submitChat(qIdx, optIdx) {
+  const inp = document.getElementById('chat-input');
+  if (!inp || !inp.value.trim()) return;
+  const text = inp.value.trim();
+  inp.value = '';
+  chatHistory.push({role:'student', text});
+  askDeepSeek(qIdx, optIdx, text, true);
+}
+
+function buildFormulaCard(qIdx, optIdx, hr, desc, reply, fromCache) {
+  const label = fromCache ? 'Attending (DeepSeek) · cached' : 'Attending (DeepSeek)';
+  const renderedReply = renderMath(reply);
+  // Build chat history HTML
+  let chatHTML = '';
+  if (chatHistory.length > 0) {
+    chatHTML = '<div class="chat-history">';
+    chatHistory.forEach(m => {
+      const cls = m.role === 'student' ? 'chat-msg-student' : 'chat-msg-attending';
+      chatHTML += '<div class="'+cls+'"><span class="chat-role">'+(m.role==='student'?'You':'Immersa')+'</span> '+renderMath(m.text)+'</div>';
+    });
+    chatHTML += '</div>';
+  }
+  return `<span class="math-line">HR=${hr.toFixed(2)} → 1.0 − ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}% prevented</span><span class="body-text">${renderMath(desc)}</span><div class="ai-reply"><div class="ai-reply-label">${label}</div>${renderedReply}</div>${chatHTML}<div class="chat-input-row"><input type="text" id="chat-input" class="chat-input" placeholder="Ask Immersa a follow-up..." onkeydown="if(event.key==='Enter')submitChat(${qIdx},${optIdx})"><button class="chat-send-btn" onclick="submitChat(${qIdx},${optIdx})">→</button></div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending">🎤</button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Refresh</button>`;
+}
 
 async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
   const key = getDsKey();
@@ -782,14 +843,15 @@ async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
   const opt = q.options[optIdx];
   const formulaEl = document.getElementById('cbody-formula');
   const cacheKey = q.id + ':' + optIdx;
+  const hr = opt.graph ? opt.graph.hr : 0.60;
+  const brate = opt.graph ? opt.graph.brate : 0.30;
 
   // ── Cache check — skip if forceRefresh or follow-up ──
   if (!forceRefresh && !followUpText) {
     const cached = loadAttendingCache();
     if (cached[cacheKey]) {
-      const hr = opt.graph ? opt.graph.hr : 0.60;
-      const reply = cached[cacheKey];
-      formulaEl.innerHTML = `<span class="math-line">HR=${hr.toFixed(2)} → 1.0 − ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}% prevented</span><span class="body-text">${opt.desc}</span><div class="ai-reply"><div class="ai-reply-label">Attending (DeepSeek) · cached</div>${reply}</div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending">🎤</button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Ask again</button>`;
+      chatHistory = []; // new option = fresh chat
+      formulaEl.innerHTML = buildFormulaCard(qIdx, optIdx, hr, opt.desc, cached[cacheKey], true);
       switchCardTab('formula');
       lastAskState = { qIdx, optIdx, q, opt };
       return;
@@ -799,11 +861,8 @@ async function askDeepSeek(qIdx, optIdx, followUpText, forceRefresh) {
   // Store current state for voice follow-up
   lastAskState = { qIdx, optIdx, q, opt };
 
-  formulaEl.innerHTML = `<span class="body-text" style="display:flex;align-items:center;gap:6px"><svg style="animation:spin 1s linear infinite;width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg> ${followUpText ? 'Responding...' : 'Asking DeepSeek...'}</span>`;
+  formulaEl.innerHTML = `<span class="body-text" style="display:flex;align-items:center;gap:6px"><svg style="animation:spin 1s linear infinite;width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg> ${followUpText ? 'Immersa is thinking...' : 'Asking Immersa...'}</span>`;
   switchCardTab('formula');
-
-  const hr = opt.graph ? opt.graph.hr : 0.60;
-  const brate = opt.graph ? opt.graph.brate : 0.30;
 
   const baseMsg = `Question: ${q.stem}
 
@@ -813,9 +872,14 @@ Pre-written explanation: ${opt.desc}
 Correct answer index: ${q.correct} (this option is index ${optIdx})
 `;
 
-  const userMsg = followUpText
-    ? `${baseMsg}\nStudent follow-up (spoken): "${followUpText}"\n\nRespond directly to what the student just said. Be conversational. Still stick to attending voice — mechanism-first, 3-5 sentences.`
-    : `${baseMsg}Explain in attending voice why this specific option is ${optIdx===q.correct?'correct':'incorrect'}. Connect the hazard ratio concept to the graph. 3-5 sentences.`;
+  let userMsg;
+  if (followUpText) {
+    // Include chat history for context
+    const historyLines = chatHistory.slice(-6).map(m => (m.role==='student'?'Student':'Attending')+': '+m.text).join('\n');
+    userMsg = `${baseMsg}\n\nConversation so far:\n${historyLines}\n\nStudent's latest follow-up: "${followUpText}"\n\nRespond to the student's question directly. Be conversational. Stick to attending voice — mechanism-first, 3-5 sentences.`;
+  } else {
+    userMsg = `${baseMsg}Explain in attending voice why this specific option is ${optIdx===q.correct?'correct':'incorrect'}. Connect the hazard ratio concept to the graph. 3-5 sentences.`;
+  }
 
   try {
     const r = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -838,14 +902,17 @@ Correct answer index: ${q.correct} (this option is index ${optIdx})
     const data = await r.json();
     const reply = data.choices?.[0]?.message?.content?.trim() || 'No response.';
 
-    // Save to cache
+    // Save to cache (only the initial explanation, not chat follow-ups)
     if (!followUpText) {
       const cached = loadAttendingCache();
       cached[cacheKey] = reply;
       saveAttendingCache(cached);
+      chatHistory = []; // new option = fresh chat
+    } else {
+      chatHistory.push({role:'attending', text: reply});
     }
 
-    formulaEl.innerHTML = `<span class="math-line">HR=${hr.toFixed(2)} → 1.0 − ${hr.toFixed(2)} = ${(1-hr).toFixed(2)} = ${((1-hr)*100).toFixed(0)}% prevented</span><span class="body-text">${opt.desc}</span><div class="ai-reply"><div class="ai-reply-label">Attending (DeepSeek)</div>${reply}</div><div class="voice-row"><button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Speak to the attending">🎤</button><span class="voice-preview" id="voice-preview"></span></div><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Ask again</button>`;
+    formulaEl.innerHTML = buildFormulaCard(qIdx, optIdx, hr, opt.desc, reply, false);
   } catch (e) {
     formulaEl.innerHTML = `<span class="body-text" style="color:#ef4444">Error: ${e.message}</span><button class="ask-ai-btn" onclick="askDeepSeek(${qIdx},${optIdx},null,true)">Retry</button>`;
   }
